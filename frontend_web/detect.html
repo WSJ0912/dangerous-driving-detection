@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实时检测 - 智慧驭行</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1119;--surface:#1a1d2e;--surface2:#222639;--border:#2a2f45;
+  --text:#e2e4ec;--text2:#9096a8;--accent:#4f8cff;--accent2:#3158c4;
+  --danger:#ff4757;--warn:#ffa502;--safe:#2ed573;--info:#4f8cff;
+  --radius:10px;--radius-sm:6px;--shadow:0 2px 12px rgba(0,0,0,.3);
+}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;
+}
+#sidebar{
+  width:300px;min-width:300px;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+}
+#sidebar .head{
+  padding:20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+#sidebar .head .logo{
+  width:36px;height:36px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+#sidebar .head h2{font-size:16px;font-weight:600}
+#sidebar .head p{font-size:11px;color:var(--text2)}
+#sidebar .tabs{display:flex;border-bottom:1px solid var(--border)}
+#sidebar .tabs button{
+  flex:1;padding:12px;background:none;border:none;color:var(--text2);
+  font-size:12px;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;
+}
+#sidebar .tabs button.active{color:var(--accent);border-color:var(--accent)}
+#sidebar .content{flex:1;overflow-y:auto;padding:16px}
+#sidebar .empty{text-align:center;color:var(--text2);padding:40px 0;font-size:13px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:700;line-height:1}
+.stat-card .label{font-size:11px;color:var(--text2);margin-top:6px}
+.stat-card.danger .num{color:var(--danger)}
+.stat-card.warn .num{color:var(--warn)}
+.stat-card.info .num{color:var(--info)}
+.stat-card.safe .num{color:var(--safe)}
+.alert-item{
+  background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;
+  margin-bottom:8px;font-size:12px;border-left:3px solid var(--danger);
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.alert-item.resolved{border-color:var(--safe);opacity:.7}
+.alert-item .time{color:var(--text2);font-size:10px}
+.alert-item .body{display:flex;gap:10px;align-items:center;min-width:0}
+.alert-item .body .txt{min-width:0}
+.alert-item .msg{font-weight:500;word-break:break-word}
+.shot-link{display:block;flex:0 0 auto;line-height:0}
+.shot-thumb{
+  width:56px;height:42px;object-fit:cover;border-radius:4px;
+  border:1px solid var(--border);background:#000;
+}
+.shot-none{font-size:10px;color:var(--text2)}
+.mini-btn{
+  padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;
+}
+.mini-btn:hover{background:var(--border)}
+.hint{font-size:11px;color:var(--warn);line-height:1.6;margin-top:10px}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{
+  padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+#topbar .status{display:flex;align-items:center;gap:8px;font-size:12px}
+#topbar .dot{width:8px;height:8px;border-radius:50%;background:var(--safe);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#topbar .dot.off{background:var(--danger);animation:none}
+#topbar .status-text.err{color:var(--danger)}
+#topbar .controls{display:flex;align-items:center;gap:8px}
+#topbar .controls button,#topbar .controls a{
+  padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;
+  transition:.2s;text-decoration:none;
+}
+#topbar .controls button:hover,#topbar .controls a:hover{background:var(--border)}
+#topbar .controls button.active{background:var(--accent);border-color:var(--accent)}
+#camera-wrap{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:24px;position:relative;
+}
+#camera-box{
+  position:relative;max-width:100%;max-height:100%;
+  border-radius:var(--radius);overflow:hidden;
+  box-shadow:var(--shadow);background:#000;
+}
+#camera-feed{display:block;max-width:100%;max-height:70vh;object-fit:contain}
+#detection-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#camera-placeholder{
+  width:640px;height:480px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;color:var(--text2);
+  background:var(--surface2);border-radius:var(--radius);
+}
+#camera-placeholder svg{margin-bottom:16px;opacity:.5}
+#camera-placeholder p{font-size:14px}
+#detection-list{display:flex;gap:8px;padding:0 24px 16px;flex-wrap:wrap;min-height:60px}
+.det-tag{
+  display:flex;align-items:center;gap:6px;padding:6px 14px;
+  border-radius:20px;font-size:12px;font-weight:500;
+  background:var(--surface2);border:1px solid var(--border);
+}
+.det-tag.high{border-color:var(--danger);color:var(--danger)}
+.det-tag.medium{border-color:var(--warn);color:var(--warn)}
+.det-tag.low{border-color:var(--safe);color:var(--safe)}
+.det-tag .badge{width:6px;height:6px;border-radius:50%}
+.det-tag.high .badge{background:var(--danger)}
+.det-tag.medium .badge{background:var(--warn)}
+.det-tag.low .badge{background:var(--safe)}
+#toast-container{
+  position:fixed;top:20px;right:20px;z-index:999;
+  display:flex;flex-direction:column;gap:8px;
+}
+.toast{
+  padding:14px 20px;border-radius:var(--radius-sm);
+  font-size:14px;font-weight:500;color:#fff;
+  animation:slideIn .3s ease;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;max-width:400px;
+}
+.toast.triggered{background:var(--danger)}
+.toast.resolved{background:var(--safe)}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast .icon{font-size:20px}
+#trend-chart{width:100%;height:160px;margin-top:16px}
+#trend-chart svg{width:100%;height:100%}
+#trend-chart .axis{stroke:var(--border);stroke-width:1}
+#trend-chart .line{fill:none;stroke-width:2;stroke-linejoin:round}
+#trend-chart .line.detection{stroke:var(--info)}
+#trend-chart .line.alert{stroke:var(--danger)}
+#trend-chart .dot{stroke:#fff;stroke-width:2}
+#trend-chart .dot.detection{fill:var(--info)}
+#trend-chart .dot.alert{fill:var(--danger)}
+#trend-chart .label{font-size:9px;fill:var(--text2)}
+.ctrl-group{display:flex;align-items:center;gap:6px;margin-left:12px}
+.ctrl-group label{font-size:11px;color:var(--text2);white-space:nowrap}
+.ctrl-group input[type=range]{-webkit-appearance:none;width:80px;height:4px;background:var(--border);border-radius:2px;outline:none}
+.ctrl-group input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+.ctrl-group .val{font-size:11px;color:var(--text);min-width:32px;text-align:center}
+.back-link{font-size:12px;color:var(--accent);text-decoration:none;margin-right:12px}
+.back-link:hover{text-decoration:underline}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:768px){#sidebar{display:none}#camera-wrap{padding:12px}#topbar{padding:8px 16px}}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div class="head">
+    <div class="logo">&#x1f6e1;</div>
+    <div><h2>智慧驭行</h2><p>实时检测面板</p></div>
+  </div>
+  <div class="tabs">
+    <button class="active" data-tab="stats">统计</button>
+    <button data-tab="alerts">告警记录</button>
+    <button data-tab="history">检测历史</button>
+  </div>
+  <!-- 注意：#trend-chart 必须与 #sidebar-content 平级，
+       否则 renderStats() 整块覆盖 innerHTML 会把趋势图容器删掉（原必现 TypeError 的根因） -->
+  <div class="content">
+    <div id="sidebar-content">
+      <div class="empty">点击「开始检测」启动系统</div>
+    </div>
+    <div id="trend-chart" style="display:none"><svg id="trend-svg" viewBox="0 0 268 160" preserveAspectRatio="none"></svg></div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <div class="status">
+      <a href="/" class="back-link">&larr; 返回主页</a>
+      <div class="dot off" id="status-dot"></div>
+      <span id="status-text">系统待命</span>
+    </div>
+    <div class="controls">
+      <button id="btn-start">&#x25b6; 开始检测</button>
+      <button id="btn-snapshot" style="display:none">&#x1f4f7; 快照</button>
+      <div class="ctrl-group">
+        <label>间隔</label>
+        <input type="range" id="ctrl-interval" min="100" max="1000" value="300" step="50">
+        <span class="val" id="val-interval">300ms</span>
+      </div>
+      <div class="ctrl-group">
+        <label>阈值</label>
+        <input type="range" id="ctrl-conf" min="10" max="80" value="30" step="5">
+        <span class="val" id="val-conf">0.30</span>
+      </div>
+    </div>
+  </div>
+  <div id="camera-wrap">
+    <div id="camera-placeholder">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="16" height="14" rx="2"/><path d="M18 10l4-4v12l-4-4"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="6" y1="12" x2="10" y2="12"/></svg>
+      <p>点击「开始检测」启动摄像头</p>
+    </div>
+    <div id="camera-box" style="display:none">
+      <video id="camera-feed" autoplay playsinline></video>
+      <canvas id="detection-canvas"></canvas>
+    </div>
+  </div>
+  <div id="detection-list"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+'use strict';
+/* 全局状态 */
+var stream=null,detecting=false,frameTimer=null,inFlight=false;
+var detectInterval=300,detectConf=0.3;
+var video=null,canvasCtx=null,canvasEl=null;
+var lastDetections=[],lastAlerts=[];
+var statsCache=null,statsError='',alertHistory=[];
+var currentTab='stats';
+var frameCount=0,lastStatsAt=0,lastErrAt=0;
+var STATS_MIN_INTERVAL=5000;   /* 统计刷新最小间隔（降频，原来每帧都请求） */
+
+function $(id){return document.getElementById(id)}
+
+function esc(s){
+  return String(s===null||s===undefined?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* 只接受后端约定的截图地址，避免把任意 URL 塞进 src/href；空字符串/缺失一律当作无截图 */
+function safeShotUrl(u){
+  return (typeof u==='string'&&/^\/api\/screenshots\/[A-Za-z0-9._-]+$/.test(u))?u:'';
+}
+
+/* 截图文件可能已被清理（后端返回 404 JSON）→ 用文字替换破图，不留裂图图标 */
+function bindShotFallback(root){
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('img.shot-thumb').forEach(function(img){
+    img.addEventListener('error',function(){
+      var span=document.createElement('span');
+      span.className='shot-none';span.textContent='截图失效';
+      if(this.parentNode)this.parentNode.replaceChild(span,this);
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  video=$('camera-feed');canvasEl=$('detection-canvas');
+  canvasCtx=canvasEl.getContext('2d');
+  $('btn-start').addEventListener('click',toggleDetection);
+  $('btn-snapshot').addEventListener('click',takeSnapshot);
+  document.querySelectorAll('#sidebar .tabs button').forEach(function(b){
+    b.addEventListener('click',function(){switchTab(b.dataset.tab)});
+  });
+  initControls();
+  loadStats(true);
+  loadSettingsDefaults();
+});
+
+/* ============ 摄像头 ============ */
+async function startCamera(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    showToast('当前浏览器不支持摄像头（需要 https 或 localhost）','triggered');
+    return false;
+  }
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});
+    video.srcObject=stream;await video.play();
+    $('camera-placeholder').style.display='none';
+    $('camera-box').style.display='block';
+    return true;
+  }catch(e){showToast('无法访问摄像头: '+(e.message||e),'triggered');return false}
+}
+
+function stopCamera(){
+  if(frameTimer){clearInterval(frameTimer);frameTimer=null}
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+  video.srcObject=null;
+  inFlight=false;
+  $('camera-placeholder').style.display='flex';
+  $('camera-box').style.display='none';
+  clearCanvas();
+}
+
+async function toggleDetection(){
+  if(detecting){
+    detecting=false;stopCamera();
+    $('btn-start').innerHTML='&#x25b6; 开始检测';
+    $('btn-start').classList.remove('active');
+    $('btn-snapshot').style.display='none';
+    $('status-dot').classList.add('off');
+    $('status-text').textContent='系统待命';
+    $('status-text').classList.remove('err');
+    return;
+  }
+  var ok=await startCamera();if(!ok)return;
+  detecting=true;
+  $('btn-start').innerHTML='&#x23f9; 停止检测';
+  $('btn-start').classList.add('active');
+  $('btn-snapshot').style.display='inline-block';
+  $('status-dot').classList.remove('off');
+  $('status-text').textContent='正在检测...';
+  $('status-text').classList.remove('err');
+  sendFrame();
+  frameTimer=setInterval(sendFrame,detectInterval);
+}
+
+/* ============ 检测主循环 ============ */
+/* inFlight 背压：上一次请求没回来之前不再发新帧 */
+async function sendFrame(){
+  if(!detecting||inFlight)return;
+  if(!video||video.readyState<2)return;
+  var w=video.videoWidth,h=video.videoHeight;
+  if(!w||!h)return;
+  inFlight=true;
+  try{
+    canvasEl.width=w;canvasEl.height=h;
+    var tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;
+    tmp.getContext('2d').drawImage(video,0,0,w,h);
+    var b64=tmp.toDataURL('image/jpeg',.7).split(',')[1];
+    var r=await fetch('/api/detect',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:b64,conf:detectConf})   /* 置信度滑杆真正生效 */
+    });
+    if(!r.ok){
+      var msg='检测请求失败 (HTTP '+r.status+')';
+      try{var ej=await r.json();if(ej&&ej.error)msg=ej.error}catch(e2){msg+='（响应不是 JSON）'}
+      throw new Error(msg);
+    }
+    var data=await r.json();
+    if(!detecting)return;
+    if(data.success===false){throw new Error(data.error||'后端返回 success=false')}
+    lastDetections=data.detections||[];lastAlerts=data.alerts||[];
+    /* bbox 是原图像素坐标 → 用后端返回的原图尺寸换算到画布（不再用固定输入尺寸） */
+    drawDetections(lastDetections,data.image_width,data.image_height);
+    updateDetectionList();
+    handleAlerts(lastAlerts);
+    frameCount++;
+    if(frameCount%10===0)loadStats();   /* 降频：约每 10 帧（≈3 秒）刷一次统计 */
+    if($('status-text').classList.contains('err')){
+      $('status-text').textContent='正在检测...';
+      $('status-text').classList.remove('err');
+      $('status-dot').classList.remove('off');
+    }
+  }catch(e){
+    reportDetectError(e&&e.message?e.message:String(e));
+  }finally{
+    inFlight=false;
+  }
+}
+
+function reportDetectError(msg){
+  var st=$('status-text');
+  st.textContent='检测异常: '+msg;
+  st.classList.add('err');
+  $('status-dot').classList.add('off');
+  var now=Date.now();
+  if(now-lastErrAt>5000){lastErrAt=now;showToast('检测异常: '+msg,'triggered')}  /* 避免刷屏 */
+}
+
+/* ============ 画框 ============ */
+function drawDetections(dets,imgW,imgH){
+  if(!canvasEl.width||!canvasEl.height)return;
+  canvasCtx.clearRect(0,0,canvasEl.width,canvasEl.height);
+  var iw=(typeof imgW==='number'&&imgW>0)?imgW:((video&&video.videoWidth)||canvasEl.width);
+  var ih=(typeof imgH==='number'&&imgH>0)?imgH:((video&&video.videoHeight)||canvasEl.height);
+  var sx=canvasEl.width/iw,sy=canvasEl.height/ih;
+  for(var i=0;i<dets.length;i++){
+    var d=dets[i],b=d.bbox;
+    if(!b||b.length<4)continue;
+    var rx=b[0]*sx,ry=b[1]*sy,rw=(b[2]-b[0])*sx,rh=(b[3]-b[1])*sy;
+    var color=d.danger_level==='high'?'#ff4757':d.danger_level==='medium'?'#ffa502':'#2ed573';
+    canvasCtx.strokeStyle=color;canvasCtx.lineWidth=2;canvasCtx.strokeRect(rx,ry,rw,rh);
+    canvasCtx.fillStyle=color;canvasCtx.font='12px sans-serif';
+    var label=d.class+' '+((d.confidence||0)*100).toFixed(0)+'%'+(d.track_id?' #'+d.track_id:'');
+    var tw=canvasCtx.measureText(label).width;
+    canvasCtx.fillRect(rx,ry>20?ry-20:ry,tw+8,20);
+    canvasCtx.fillStyle='#fff';canvasCtx.fillText(label,rx+4,(ry>20?ry-5:ry+15));
+  }
+}
+
+function clearCanvas(){if(canvasCtx)canvasCtx.clearRect(0,0,canvasEl.width,canvasEl.height)}
+
+function updateDetectionList(){
+  var el=$('detection-list');
+  if(lastDetections.length===0){
+    el.innerHTML='<span style="color:var(--text2);font-size:12px;padding:12px 24px">未检测到目标</span>';return;
+  }
+  el.innerHTML=lastDetections.map(function(d){
+    return '<span class="det-tag '+esc(d.danger_level||'low')+'"><span class="badge"></span>'+esc(d.class)+' ('+((d.confidence||0)*100).toFixed(0)+'%)</span>';
+  }).join('');
+}
+
+/* ============ 告警 ============ */
+function handleAlerts(alerts){
+  if(!alerts||alerts.length===0)return;
+  for(var i=0;i<alerts.length;i++){
+    var a=alerts[i];
+    showToast(a.message||a.type,a.status||'triggered');
+    alertHistory.unshift({type:a.type,status:a.status||'triggered',message:a.message,time:new Date().toLocaleTimeString()});
+  }
+  if(alertHistory.length>50)alertHistory=alertHistory.slice(0,50);
+  loadStats();                      /* 有告警时刷新（内部仍有 5s 降频） */
+  if(currentTab==='alerts')renderAlertHistory();
+}
+
+function showToast(msg,type){
+  var t=document.createElement('div');
+  t.className='toast '+(type||'triggered');
+  var icon=(type==='resolved')?'&#x2714;':'&#x26a0;';
+  t.innerHTML='<span class="icon">'+icon+'</span><span>'+esc(msg)+'</span>';
+  $('toast-container').appendChild(t);
+  setTimeout(function(){t.style.opacity='0';t.style.transition='.3s';setTimeout(function(){t.remove()},300)},3000);
+}
+
+/* ============ 快照：合成「当前画面 + 检测框」 ============ */
+function takeSnapshot(){
+  var w=canvasEl.width||(video&&video.videoWidth)||0;
+  var h=canvasEl.height||(video&&video.videoHeight)||0;
+  if(!w||!h){showToast('暂无可导出的画面，请先开始检测','triggered');return}
+  var out=document.createElement('canvas');out.width=w;out.height=h;
+  var octx=out.getContext('2d');
+  octx.fillStyle='#000';octx.fillRect(0,0,w,h);
+  if(video&&video.readyState>=2){
+    octx.drawImage(video,0,0,w,h);          /* 视频帧 -> 离屏画布 */
+  }else{
+    octx.fillStyle='#9096a8';octx.font='16px sans-serif';
+    octx.fillText('（拍摄时无摄像头画面）',12,28);
+  }
+  if(canvasEl.width)octx.drawImage(canvasEl,0,0,w,h);   /* 叠加检测框图层 */
+  var a=document.createElement('a');
+  a.download='snapshot_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.png';
+  a.href=out.toDataURL('image/png');
+  a.click();
+  showToast('快照已保存','resolved');
+}
+
+/* ============ 侧栏标签 ============ */
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('#sidebar .tabs button').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab)});
+  var c=$('trend-chart');
+  if(tab==='stats'){
+    if(c)c.style.display='block';
+    renderStats();
+  }else{
+    if(c)c.style.display='none';
+  }
+  if(tab==='alerts')renderAlertHistory();
+  else if(tab==='history')loadDetectionHistory();
+}
+
+async function loadStats(force){
+  var now=Date.now();
+  if(!force&&now-lastStatsAt<STATS_MIN_INTERVAL)return;
+  lastStatsAt=now;
+  try{
+    var r=await fetch('/api/history?stats=1');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    statsCache=await r.json();
+    statsError='';
+  }catch(e){
+    statsError=(e&&e.message)?e.message:'统计加载失败';
+  }
+  if(currentTab==='stats')renderStats();
+}
+
+function renderStats(){
+  var el=$('sidebar-content');
+  if(!statsCache){
+    el.innerHTML='<div class="empty">'+(statsError?('统计加载失败：'+esc(statsError)):'暂无统计数据')+'</div>'+
+      '<div style="text-align:center;margin-top:12px"><button class="mini-btn" onclick="loadStats(true)">重试</button></div>';
+    drawTrendChart();
+    return;
+  }
+  var s=statsCache,cls=s.detections_by_class||{};
+  var h='<div class="stat-grid"><div class="stat-card info"><div class="num">'+(s.total_detections||0)+'</div><div class="label">总检测</div></div><div class="stat-card danger"><div class="num">'+(s.total_alerts||0)+'</div><div class="label">总告警</div></div></div>';
+  h+='<div style="font-size:13px;font-weight:600;margin-bottom:8px">类别分布</div>';
+  var entries=Object.entries(cls).sort(function(a,b){return b[1]-a[1]});
+  if(entries.length===0){h+='<div class="empty">暂无数据</div>'}
+  else{
+    for(var i=0;i<entries.length;i++){
+      var k=entries[i][0],v=entries[i][1];
+      var pct=(s.total_detections||0)>0?(v/(s.total_detections||1)*100).toFixed(1):0;
+      h+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+esc(k)+'</span><span style="color:var(--text2)">'+v+' ('+pct+'%)</span></div>';
+    }
+  }
+  if(statsError)h+='<div class="hint">统计刷新失败：'+esc(statsError)+'（当前显示上次成功的数据）</div>';
+  el.innerHTML=h;
+  drawTrendChart();
+}
+
+async function drawTrendChart(){
+  var c=$('trend-chart'),svg=$('trend-svg');
+  if(!c||!svg)return;
+  if(currentTab!=='stats'){c.style.display='none';return}
+  c.style.display='block';
+  var W=c.clientWidth||268,H=160;
+  var pad={top:16,right:12,bottom:24,left:32};
+  var pw=W-pad.left-pad.right,ph=H-pad.top-pad.bottom;
+  function text(x,y,cls,t){return '<text x="'+x+'" y="'+y+'" class="'+(cls||'label')+'" text-anchor="middle">'+esc(t)+'</text>'}
+  try{
+    var r=await fetch('/api/history?trend=1&days=7');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    if(currentTab!=='stats')return;
+    var dt=data.detection_trend||{},at=data.alert_trend||{};
+    var keyMap={};
+    Object.keys(dt).forEach(function(k){keyMap[k]=1});
+    Object.keys(at).forEach(function(k){keyMap[k]=1});
+    var days=Object.keys(keyMap).sort();
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    if(!days.length){
+      svg.innerHTML=text(W/2,H/2,'label','近 7 天暂无检测数据');
+      return;
+    }
+    var maxVal=1,dvals=[],avals=[];
+    for(var i=0;i<days.length;i++){
+      dvals.push(dt[days[i]]||0);avals.push(at[days[i]]||0);
+      if(dvals[i]>maxVal)maxVal=dvals[i];
+      if(avals[i]>maxVal)maxVal=avals[i];
+    }
+    var xStep=pw/Math.max(days.length-1,1);
+    function sx(i){return pad.left+i*xStep}
+    function sy(v){return pad.top+ph-(v/maxVal)*ph}
+    var dp='',ap='',dd='',ad='',parts=[];
+    for(var j=0;j<days.length;j++){
+      var x=sx(j);
+      dp+=' '+x+','+sy(dvals[j]);ap+=' '+x+','+sy(avals[j]);
+      dd+='<circle cx="'+x+'" cy="'+sy(dvals[j])+'" r="3" class="dot detection"/>';
+      ad+='<circle cx="'+x+'" cy="'+sy(avals[j])+'" r="3" class="dot alert"/>';
+    }
+    parts.push('<line x1="'+pad.left+'" y1="'+pad.top+'" x2="'+pad.left+'" y2="'+(pad.top+ph)+'" class="axis"/>');
+    parts.push('<line x1="'+pad.left+'" y1="'+(pad.top+ph)+'" x2="'+(pad.left+pw)+'" y2="'+(pad.top+ph)+'" class="axis"/>');
+    parts.push('<text x="4" y="'+(pad.top+4)+'" class="label">'+maxVal+'</text><text x="4" y="'+(pad.top+ph)+'" class="label">0</text>');
+    for(var m=0;m<days.length;m++){
+      parts.push('<text x="'+sx(m)+'" y="'+(H-4)+'" text-anchor="middle" class="label">'+esc(String(days[m]).slice(5))+'</text>');
+    }
+    parts.push('<polyline points="'+dp.trim()+'" class="line detection"/>'+dd);
+    parts.push('<polyline points="'+ap.trim()+'" class="line alert"/>'+ad);
+    parts.push('<line x1="'+(W-80)+'" y1="4" x2="'+(W-64)+'" y2="4" class="line detection"/><text x="'+(W-60)+'" y="8" class="label">检测</text>');
+    parts.push('<line x1="'+(W-32)+'" y1="4" x2="'+(W-16)+'" y2="4" class="line alert"/><text x="'+(W-12)+'" y="8" class="label">告警</text>');
+    svg.innerHTML=parts.join('');
+  }catch(e){
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=text(W/2,H/2,'label','趋势加载失败：'+((e&&e.message)||''));
+  }
+}
+
+/* 告警记录：读后端（含 screenshot_url 缩略图），失败回退到本次会话内存记录 */
+async function renderAlertHistory(){
+  var el=$('sidebar-content');
+  el.innerHTML='<div class="empty">加载告警记录...</div>';
+  try{
+    var r=await fetch('/api/history?limit=30');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    var alts=data.alerts||[];
+    if(!alts.length){
+      el.innerHTML='<div class="empty">暂无告警记录</div>';
+      return;
+    }
+    el.innerHTML=alts.map(function(a){
+      var shot=safeShotUrl(a.screenshot_url);
+      var thumb=shot?'<a class="shot-link" href="'+esc(shot)+'" target="_blank" rel="noopener" title="查看告警截图"><img class="shot-thumb" src="'+esc(shot)+'" alt="告警截图" loading="lazy"></a>':'';
+      return '<div class="alert-item"><div class="body">'+thumb+'<div class="txt">'+
+        '<div class="msg">'+esc(a.message||a.alert_type)+'</div>'+
+        '<div class="time">'+esc(String(a.timestamp||'').replace('T',' ').slice(0,19))+' · '+esc(a.alert_type||'')+'</div>'+
+        '</div></div><span style="font-size:10px;color:var(--danger)">告警</span></div>';
+    }).join('');
+    bindShotFallback(el);
+  }catch(e){
+    if(alertHistory.length===0){
+      el.innerHTML='<div class="empty">告警记录加载失败：'+esc((e&&e.message)||'')+'</div>'+
+        '<div style="text-align:center;margin-top:12px"><button class="mini-btn" onclick="renderAlertHistory()">重试</button></div>';
+      return;
+    }
+    el.innerHTML='<div class="hint">后端告警记录加载失败，以下为本次会话记录</div>'+alertHistory.slice(0,30).map(function(a){
+      return '<div class="alert-item '+(a.status==='resolved'?'resolved':'')+'"><div><div class="msg">'+esc(a.message)+'</div><div class="time">'+esc(a.time)+'</div></div><span style="font-size:10px;color:'+(a.status==='resolved'?'var(--safe)':'var(--danger)')+'">'+(a.status==='resolved'?'已解除':'告警')+'</span></div>';
+    }).join('');
+  }
+}
+
+async function loadDetectionHistory(){
+  var el=$('sidebar-content');
+  try{
+    var r=await fetch('/api/history?limit=30');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    var dets=data.detections||[];
+    if(dets.length===0){el.innerHTML='<div class="empty">暂无检测历史</div>';return}
+    el.innerHTML=dets.map(function(d){
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span>'+esc(d.class_name)+'</span><span style="color:var(--text2)">'+((d.confidence||0)*100).toFixed(0)+'% | '+esc(String(d.timestamp||'').replace('T',' ').slice(11,19))+'</span></div>';
+    }).join('');
+  }catch(e){el.innerHTML='<div class="empty">加载失败：'+esc((e&&e.message)||'')+'</div>'}
+}
+
+/* ============ 控件 ============ */
+function initControls(){
+  $('ctrl-interval').addEventListener('input',function(){
+    detectInterval=parseInt(this.value,10);$('val-interval').textContent=detectInterval+'ms';restartFrameTimer();
+  });
+  $('ctrl-conf').addEventListener('input',function(){
+    detectConf=parseInt(this.value,10)/100;$('val-conf').textContent=detectConf.toFixed(2);
+  });
+}
+
+function restartFrameTimer(){
+  if(!detecting)return;
+  clearInterval(frameTimer);
+  frameTimer=setInterval(sendFrame,detectInterval);
+}
+
+/* 用后端已保存的设置初始化滑杆默认值（设置页改完这里能对上） */
+async function loadSettingsDefaults(){
+  try{
+    var r=await fetch('/api/settings');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json(),s=d&&d.settings;
+    if(!s)return;
+    if(typeof s.conf_threshold==='number'&&isFinite(s.conf_threshold)){
+      detectConf=Math.min(.95,Math.max(.05,s.conf_threshold));
+      $('ctrl-conf').value=Math.round(detectConf*100);
+      $('val-conf').textContent=detectConf.toFixed(2);
+    }
+    if(typeof s.detect_interval_ms==='number'&&isFinite(s.detect_interval_ms)){
+      detectInterval=Math.min(2000,Math.max(100,Math.round(s.detect_interval_ms)));
+      $('ctrl-interval').value=detectInterval;
+      $('val-interval').textContent=detectInterval+'ms';
+      restartFrameTimer();
+    }
+  }catch(e){
+    console.warn('读取后端设置失败，检测参数使用页面默认值：',e&&e.message?e.message:e);
+  }
+}
+</script>
+</body>
+</html>

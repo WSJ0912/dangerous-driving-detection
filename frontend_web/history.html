@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>历史记录 - 智慧驭行</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1119;--surface:#1a1d2e;--surface2:#222639;--border:#2a2f45;
+  --text:#e2e4ec;--text2:#9096a8;--accent:#4f8cff;
+  --danger:#ff4757;--warn:#ffa502;--safe:#2ed573;
+  --radius:12px;--radius-sm:8px;--shadow:0 2px 12px rgba(0,0,0,.3);
+}
+html,body{width:100%;min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;
+  background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;align-items:center;
+}
+#header{
+  width:100%;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+#header .brand{display:flex;align-items:center;gap:12px}
+#header .logo{
+  width:36px;height:36px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+#header h1{font-size:16px;font-weight:600}
+#header .back{color:var(--accent);text-decoration:none;font-size:12px}
+#header .back:hover{text-decoration:underline}
+
+#content{width:100%;max-width:1000px;padding:24px 40px}
+
+/* Summary cards */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.s-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:16px;text-align:center;
+}
+.s-card .num{font-size:26px;font-weight:700;line-height:1}
+.s-card .num.danger{color:var(--danger)}
+.s-card .num.info{color:var(--accent)}
+.s-card .num.safe{color:var(--safe)}
+.s-card .num.warn{color:var(--warn)}
+.s-card .num.sm{font-size:15px;line-height:1.5;word-break:break-all}
+.s-card .label{font-size:11px;color:var(--text2);margin-top:6px}
+
+/* Chart */
+#chart-area{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin-bottom:24px;
+}
+#chart-area h3{font-size:14px;font-weight:600;margin-bottom:16px}
+#chart-svg{width:100%;height:220px}
+#chart-svg .axis{stroke:var(--border);stroke-width:1}
+#chart-svg .line{fill:none;stroke-width:2;stroke-linejoin:round}
+#chart-svg .line.detection{stroke:var(--accent)}
+#chart-svg .line.alert{stroke:var(--danger)}
+#chart-svg .dot{stroke:#fff;stroke-width:2}
+#chart-svg .dot.detection{fill:var(--accent)}
+#chart-svg .dot.alert{fill:var(--danger)}
+#chart-svg .label{font-size:10px;fill:var(--text2)}
+
+/* Empty / error blocks */
+.empty{text-align:center;color:var(--text2);padding:60px 0;font-size:14px}
+.err-block{text-align:center;color:var(--danger);padding:28px 0;font-size:13px}
+.retry-btn{
+  margin-top:12px;padding:6px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;
+}
+.retry-btn:hover{background:var(--border)}
+
+/* Time range filter */
+#filters{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 18px;margin-bottom:16px;
+}
+#filters label{font-size:12px;color:var(--text2)}
+#filters input[type=date]{
+  padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;outline:none;
+  color-scheme:dark;
+}
+#filters button{
+  padding:7px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;transition:.2s;
+}
+#filters button:hover{background:var(--border)}
+#filters button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+#filters .hint{font-size:11px;color:var(--text2)}
+#filters .hint.active{color:var(--accent)}
+
+/* Table */
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 14px;text-align:left;font-size:12px;border-bottom:1px solid var(--border)}
+th{color:var(--text2);font-weight:500;background:var(--surface)}
+td{color:var(--text)}
+.badge{
+  display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;
+}
+.badge.high{background:rgba(255,71,87,.15);color:var(--danger)}
+.badge.medium{background:rgba(255,165,2,.15);color:var(--warn)}
+.badge.low{background:rgba(46,213,115,.15);color:var(--safe)}
+.shot-thumb{
+  width:72px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--border);
+  background:#000;display:block;
+}
+.shot-none{color:var(--text2);font-size:11px}
+
+/* Tabs */
+.tabs{display:flex;gap:0;margin-bottom:16px}
+.tabs button{
+  padding:8px 20px;background:none;border:1px solid var(--border);color:var(--text2);
+  font-size:12px;cursor:pointer;transition:.2s;
+}
+.tabs button:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
+.tabs button:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabs button+button{border-left:none}
+
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:640px){
+  #header{padding:12px 16px}
+  #content{padding:16px}
+  .summary{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="brand">
+    <div class="logo">&#x1f6e1;</div>
+    <h1>历史记录与统计</h1>
+  </div>
+  <a href="/" class="back">&larr; 返回主页</a>
+</div>
+
+<div id="content">
+  <div class="summary" id="summary"></div>
+
+  <div id="chart-area">
+    <h3>7 天检测趋势</h3>
+    <svg id="chart-svg" viewBox="0 0 900 220" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div id="filters">
+    <label for="f-start">开始日期</label>
+    <input type="date" id="f-start">
+    <label for="f-end">结束日期</label>
+    <input type="date" id="f-end">
+    <button class="primary" id="btn-query">查询</button>
+    <button id="btn-reset">重置</button>
+    <span class="hint" id="filter-hint">时间范围筛选作用于下方表格（汇总卡与趋势图为全部数据）</span>
+  </div>
+
+  <div class="tabs">
+    <button class="active" data-type="detection">检测记录</button>
+    <button data-type="alert">告警记录</button>
+  </div>
+  <div class="table-wrap" id="table-area"></div>
+</div>
+
+<script>
+'use strict';
+var currentType='detection';
+var rangeStart='',rangeEnd='';
+/* 后端 timestamp 由 datetime.now().isoformat() 写入（'T' 分隔）。
+   这里从真实数据中探测分隔符，避免与 start/end 的字符串比较对不上。 */
+var tsSep='T';
+
+function $(id){return document.getElementById(id)}
+function esc(s){
+  return String(s===null||s===undefined?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+/* 只接受后端约定的截图地址；空字符串（后端无截图时返回 ""）一律当作无截图 */
+function safeShotUrl(u){
+  return (typeof u==='string'&&/^\/api\/screenshots\/[A-Za-z0-9._-]+$/.test(u))?u:'';
+}
+/* 截图文件可能已被清理（后端返回 404 JSON）→ 用文字替换破图，不留裂图图标 */
+function bindShotFallback(root){
+  if(!root||!root.querySelectorAll)return;
+  root.querySelectorAll('img.shot-thumb').forEach(function(img){
+    img.addEventListener('error',function(){
+      var span=document.createElement('span');
+      span.className='shot-none';span.textContent='截图失效';
+      if(this.parentNode)this.parentNode.replaceChild(span,this);
+    });
+  });
+}
+function fmtTs(t){
+  var s=String(t||'');
+  return esc(s.replace('T',' ').slice(0,19));
+}
+/* behavior_state 在库里是 JSON 字符串，原来直接把 JSON 打到单元格里 */
+function formatBehaviorState(raw){
+  if(raw===null||raw===undefined||raw==='')return '-';
+  var obj=raw;
+  if(typeof obj==='string'){
+    var t=obj.trim();
+    if(t.charAt(0)!=='{'&&t.charAt(0)!=='[')return esc(t.slice(0,60));
+    try{obj=JSON.parse(t)}catch(e){return esc(t.slice(0,60))}
+  }
+  if(!obj||typeof obj!=='object')return esc(String(obj));
+  var eye=obj.eye_status==='close'?'闭':(obj.eye_status==='open'?'睁':'-');
+  var yawn=(obj.yawn_status==='Yawn'||obj.yawn_status==='yawn')?'有':'无';
+  var dis=(obj.distracted===true||obj.distracted==='true')?'是':'否';
+  var out='眼:'+eye+' 哈欠:'+yawn+' 分心:'+dis;
+  if(typeof obj.eye_close_frames==='number'&&obj.eye_close_frames>0)out+=' | 闭眼'+obj.eye_close_frames+'帧';
+  if(typeof obj.yawn_frames==='number'&&obj.yawn_frames>0)out+=' | 哈欠'+obj.yawn_frames+'帧';
+  if(typeof obj.distracted_frames==='number'&&obj.distracted_frames>0)out+=' | 分心'+obj.distracted_frames+'帧';
+  return esc(out);
+}
+function detectTsSep(rows){
+  for(var i=0;i<rows.length;i++){
+    var t=rows[i]&&rows[i].timestamp;
+    if(typeof t==='string'&&t.length>10){tsSep=(t.charAt(10)===' ')?' ':'T';return}
+  }
+}
+function rangeParams(){
+  if(!rangeStart||!rangeEnd)return '';
+  return '&start='+encodeURIComponent(rangeStart+tsSep+'00:00:00')+'&end='+encodeURIComponent(rangeEnd+tsSep+'23:59:59');
+}
+
+/* ========== 汇总卡 ========== */
+async function loadSummary(){
+  var el=$('summary');
+  try{
+    var r=await fetch('/api/history?stats=1');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var s=await r.json();
+    var total=s.total_detections||0,alerts=s.total_alerts||0;
+    var byClass=s.detections_by_class||{};
+    var maxClass='-',maxVal=0;
+    Object.keys(byClass).forEach(function(k){if(byClass[k]>maxVal){maxVal=byClass[k];maxClass=k}});
+    var classCount=Object.keys(byClass).length;
+    el.innerHTML=
+      '<div class="s-card"><div class="num info">'+total+'</div><div class="label">总检测次数</div></div>'+
+      '<div class="s-card"><div class="num danger">'+alerts+'</div><div class="label">总告警次数</div></div>'+
+      '<div class="s-card"><div class="num safe">'+classCount+'</div><div class="label">出现过的检测类别</div></div>'+
+      '<div class="s-card"><div class="num warn sm">'+esc(maxClass)+'</div><div class="label">最多检测类别</div></div>';
+  }catch(e){
+    el.innerHTML='<div class="s-card" style="grid-column:1/-1"><div class="err-block">汇总数据加载失败：'+esc((e&&e.message)||'')+
+      '<div><button class="retry-btn" onclick="loadSummary()">重试</button></div></div></div>';
+  }
+}
+
+/* ========== 7 天趋势图 ========== */
+async function loadChart(){
+  var svg=$('chart-svg');
+  var W=(svg.parentElement&&svg.parentElement.clientWidth?svg.parentElement.clientWidth-40:860),H=220;
+  var pad={top:16,right:16,bottom:32,left:40};
+  var pw=W-pad.left-pad.right,ph=H-pad.top-pad.bottom;
+  function center(t){return '<text x="'+(W/2)+'" y="'+(H/2)+'" class="label" text-anchor="middle">'+esc(t)+'</text>'}
+  try{
+    var r=await fetch('/api/history?trend=1&days=7');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    var dt=data.detection_trend||{},at=data.alert_trend||{};
+    var keyMap={};
+    Object.keys(dt).forEach(function(k){keyMap[k]=1});
+    Object.keys(at).forEach(function(k){keyMap[k]=1});
+    var days=Object.keys(keyMap).sort();
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    if(!days.length){svg.innerHTML=center('近 7 天暂无记录');return}
+    var maxVal=1,dvals=[],avals=[];
+    for(var i=0;i<days.length;i++){
+      dvals.push(dt[days[i]]||0);avals.push(at[days[i]]||0);
+      if(dvals[i]>maxVal)maxVal=dvals[i];
+      if(avals[i]>maxVal)maxVal=avals[i];
+    }
+    var xStep=pw/Math.max(days.length-1,1);
+    function sx(i){return pad.left+i*xStep}
+    function sy(v){return pad.top+ph-(v/maxVal)*ph}
+    var dp='',ap='',dd='',ad='',parts=[];
+    for(var j=0;j<days.length;j++){
+      var x=sx(j);
+      dp+=' '+x+','+sy(dvals[j]);ap+=' '+x+','+sy(avals[j]);
+      dd+='<circle cx="'+x+'" cy="'+sy(dvals[j])+'" r="4" class="dot detection"/>';
+      ad+='<circle cx="'+x+'" cy="'+sy(avals[j])+'" r="4" class="dot alert"/>';
+    }
+    parts.push('<line x1="'+pad.left+'" y1="'+pad.top+'" x2="'+pad.left+'" y2="'+(pad.top+ph)+'" class="axis"/>');
+    parts.push('<line x1="'+pad.left+'" y1="'+(pad.top+ph)+'" x2="'+(pad.left+pw)+'" y2="'+(pad.top+ph)+'" class="axis"/>');
+    parts.push('<text x="4" y="'+(pad.top+4)+'" class="label">'+maxVal+'</text><text x="4" y="'+(pad.top+ph)+'" class="label">0</text>');
+    for(var m=0;m<days.length;m++){
+      parts.push('<text x="'+sx(m)+'" y="'+(H-4)+'" text-anchor="middle" class="label">'+esc(String(days[m]).slice(5))+'</text>');
+    }
+    parts.push('<polyline points="'+dp.trim()+'" class="line detection"/>'+dd);
+    parts.push('<polyline points="'+ap.trim()+'" class="line alert"/>'+ad);
+    parts.push('<line x1="'+(W-100)+'" y1="4" x2="'+(W-84)+'" y2="4" class="line detection"/><text x="'+(W-80)+'" y="8" class="label">检测</text>');
+    parts.push('<line x1="'+(W-50)+'" y1="4" x2="'+(W-34)+'" y2="4" class="line alert"/><text x="'+(W-30)+'" y="8" class="label">告警</text>');
+    svg.innerHTML=parts.join('');
+  }catch(e){
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=center('趋势数据加载失败：'+((e&&e.message)||''))+
+      '<text x="'+(W/2)+'" y="'+(H/2+20)+'" class="label" text-anchor="middle" style="cursor:pointer" onclick="loadChart()">[ 点击重试 ]</text>';
+  }
+}
+
+/* ========== 表格 ========== */
+function renderError(el,msg,retryFn){
+  el.innerHTML='<div class="err-block">'+esc(msg)+'<div><button class="retry-btn" onclick="'+retryFn+'">重试</button></div></div>';
+}
+
+async function loadTable(){
+  var el=$('table-area');
+  el.innerHTML='<div class="empty">加载中...</div>';
+  var qs='limit=50'+rangeParams();
+  try{
+    var r=await fetch('/api/history?'+qs);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    detectTsSep((data.detections||[]).concat(data.alerts||[]));
+    if(currentType==='detection'){
+      var dets=data.detections||[];
+      if(!dets.length){
+        el.innerHTML='<div class="empty">'+(rangeStart&&rangeEnd?'该时间范围内暂无检测记录':'暂无检测记录')+'</div>';
+        return;
+      }
+      var h='<table><thead><tr><th>时间</th><th>类别</th><th>置信度</th><th>危险等级</th><th>追踪ID</th></tr></thead><tbody>';
+      for(var i=0;i<dets.length;i++){
+        var d=dets[i];
+        h+='<tr><td>'+fmtTs(d.timestamp)+'</td><td>'+esc(d.class_name)+'</td><td>'+((d.confidence||0)*100).toFixed(0)+'%</td>'+
+           '<td><span class="badge '+esc(d.danger_level||'low')+'">'+esc(d.danger_level||'low')+'</span></td><td>#'+esc(d.track_id)+'</td></tr>';
+      }
+      h+='</tbody></table>';el.innerHTML=h;
+    }else{
+      var alts=data.alerts||[];
+      if(!alts.length){
+        el.innerHTML='<div class="empty">'+(rangeStart&&rangeEnd?'该时间范围内暂无告警记录':'暂无告警记录')+'</div>';
+        return;
+      }
+      var h2='<table><thead><tr><th>时间</th><th>类型</th><th>消息</th><th>行为状态</th><th>截图</th></tr></thead><tbody>';
+      for(var j=0;j<alts.length;j++){
+        var a=alts[j],shot=safeShotUrl(a.screenshot_url);
+        var cell=shot?'<a href="'+esc(shot)+'" target="_blank" rel="noopener"><img class="shot-thumb" src="'+esc(shot)+'" alt="告警截图" loading="lazy"></a>':'<span class="shot-none">无</span>';
+        h2+='<tr><td>'+fmtTs(a.timestamp)+'</td>'+
+            '<td><span class="badge '+(a.alert_type==='eye_close'?'high':'medium')+'">'+esc(a.alert_type)+'</span></td>'+
+            '<td>'+esc(a.message)+'</td><td>'+formatBehaviorState(a.behavior_state)+'</td><td>'+cell+'</td></tr>';
+      }
+      h2+='</tbody></table>';el.innerHTML=h2;bindShotFallback(el);
+    }
+  }catch(e){
+    renderError(el,'加载失败：'+((e&&e.message)||''),'loadTable()');
+  }
+}
+
+/* ========== 时间范围筛选 ========== */
+function applyRange(){
+  var s=$('f-start').value,e=$('f-end').value,hint=$('filter-hint');
+  if(!s||!e){hint.textContent='请同时选择开始与结束日期（后端要求 start 与 end 同时提供）';hint.classList.remove('active');return}
+  if(s>e){hint.textContent='开始日期不能晚于结束日期';hint.classList.remove('active');return}
+  rangeStart=s;rangeEnd=e;
+  hint.textContent='已筛选：'+s+' ~ '+e;
+  hint.classList.add('active');
+  loadTable();
+}
+function resetRange(){
+  $('f-start').value='';$('f-end').value='';
+  rangeStart='';rangeEnd='';
+  var hint=$('filter-hint');
+  hint.textContent='时间范围筛选作用于下方表格（汇总卡与趋势图为全部数据）';
+  hint.classList.remove('active');
+  loadTable();
+}
+
+/* ========== 初始化 ========== */
+$('btn-query').addEventListener('click',applyRange);
+$('btn-reset').addEventListener('click',resetRange);
+document.querySelectorAll('.tabs button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.tabs button').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+    currentType=b.dataset.type;
+    loadTable();
+  });
+});
+
+loadSummary();
+loadChart();
+loadTable();
+</script>
+</body>
+</html>

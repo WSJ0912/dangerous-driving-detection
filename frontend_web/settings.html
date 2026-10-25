@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统设置 - 智慧驭行</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1119;--surface:#1a1d2e;--surface2:#222639;--border:#2a2f45;
+  --text:#e2e4ec;--text2:#9096a8;--accent:#4f8cff;
+  --danger:#ff4757;--warn:#ffa502;--safe:#2ed573;
+  --radius:12px;--radius-sm:8px;--shadow:0 2px 12px rgba(0,0,0,.3);
+}
+html,body{width:100%;min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;
+  background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;align-items:center;
+}
+#header{
+  width:100%;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+#header .brand{display:flex;align-items:center;gap:12px}
+#header .logo{
+  width:36px;height:36px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+#header h1{font-size:16px;font-weight:600}
+#header .back{color:var(--accent);text-decoration:none;font-size:12px}
+#header .back:hover{text-decoration:underline}
+
+#content{width:100%;max-width:700px;padding:24px 40px}
+
+.banner{
+  display:none;padding:12px 16px;border-radius:var(--radius-sm);font-size:12px;
+  margin-bottom:16px;line-height:1.6;
+}
+.banner.show{display:block}
+.banner.warn{background:rgba(255,165,2,.12);border:1px solid var(--warn);color:var(--warn)}
+.banner.err{background:rgba(255,71,87,.12);border:1px solid var(--danger);color:var(--danger)}
+
+.section{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px;margin-bottom:16px;
+}
+.section h3{font-size:14px;font-weight:600;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.row+.row{border-top:1px solid var(--border)}
+.row .info{flex:1}
+.row .info .title{font-size:13px;font-weight:500}
+.row .info .desc{font-size:11px;color:var(--text2);margin-top:4px;word-break:break-all}
+.row .control{min-width:120px;text-align:right}
+.row input[type=range]{
+  -webkit-appearance:none;width:140px;height:6px;
+  background:var(--border);border-radius:3px;outline:none;
+}
+.row input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;
+  border-radius:50%;background:var(--accent);cursor:pointer;
+}
+.row select{
+  padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;outline:none;color-scheme:dark;
+}
+.row button{
+  padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;transition:.2s;
+}
+.row button:hover{background:var(--border)}
+.row button.danger{color:var(--danger);border-color:var(--danger)}
+.row button.danger:hover{background:var(--danger);color:#fff}
+.row .val{font-size:12px;color:var(--text);margin-left:8px;min-width:40px;text-align:right}
+
+#toast{
+  position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:var(--radius-sm);
+  font-size:13px;color:#fff;display:none;z-index:999;max-width:420px;line-height:1.5;
+  box-shadow:var(--shadow);
+}
+#toast.success{background:var(--safe);display:block}
+#toast.error{background:var(--danger);display:block}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:640px){#header{padding:12px 16px}#content{padding:16px}}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="brand">
+    <div class="logo">&#x1f6e1;</div>
+    <h1>系统设置</h1>
+  </div>
+  <a href="/" class="back">&larr; 返回主页</a>
+</div>
+
+<div id="content">
+  <div class="banner" id="banner"></div>
+
+  <div class="section">
+    <h3>检测参数</h3>
+    <div class="row">
+      <div class="info">
+        <div class="title">检测帧间隔</div>
+        <div class="desc">摄像头帧发送到后端的时间间隔（detect_interval_ms），值越小越流畅但 CPU 占用越高</div>
+      </div>
+      <div class="control">
+        <input type="range" id="interval" min="100" max="1000" value="300" step="50">
+        <span class="val" id="val-interval">300ms</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">置信度阈值</div>
+        <div class="desc">YOLO 检测的最低置信度（conf_threshold），值越高误报越少但可能漏检</div>
+      </div>
+      <div class="control">
+        <input type="range" id="confidence" min="10" max="80" value="30" step="5">
+        <span class="val" id="val-confidence">0.30</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">NMS IoU 阈值</div>
+        <div class="desc">非极大值抑制的 IoU 阈值（iou_threshold），越高保留的相邻框越多</div>
+      </div>
+      <div class="control">
+        <input type="range" id="iou" min="5" max="95" value="50" step="5">
+        <span class="val" id="val-iou">0.50</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">输入分辨率</div>
+        <div class="desc">模型推理输入尺寸（input_size）；模型训练尺寸为 640</div>
+      </div>
+      <div class="control">
+        <select id="input-size">
+          <option value="320">320x320 (快)</option>
+          <option value="480">480x480</option>
+          <option value="640" selected>640x640 (推荐)</option>
+          <option value="960">960x960 (精确)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">最大检测数量</div>
+        <div class="desc">单帧最多保留的目标数（max_detections）</div>
+      </div>
+      <div class="control">
+        <input type="range" id="max-dets" min="1" max="10" value="10" step="1">
+        <span class="val" id="val-max-dets">10 个</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>告警配置</h3>
+    <div class="row">
+      <div class="info">
+        <div class="title">闭眼告警帧数</div>
+        <div class="desc">连续闭眼多少帧后触发告警（eye_close_frames）</div>
+      </div>
+      <div class="control">
+        <input type="range" id="eye-close" min="2" max="15" value="3" step="1">
+        <span class="val" id="val-eye-close">3 帧</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">打哈欠告警帧数</div>
+        <div class="desc">连续打哈欠多少帧后触发告警（yawn_frames）</div>
+      </div>
+      <div class="control">
+        <input type="range" id="yawn" min="2" max="10" value="2" step="1">
+        <span class="val" id="val-yawn">2 帧</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">分心告警帧数</div>
+        <div class="desc">连续分心（电话/吸烟/饮水）多少帧后触发告警（distracted_frames）</div>
+      </div>
+      <div class="control">
+        <input type="range" id="distracted" min="3" max="20" value="5" step="1">
+        <span class="val" id="val-distracted">5 帧</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">冷却帧数</div>
+        <div class="desc">告警解除后多少帧内不再触发同类型告警（cooldown_frames）</div>
+      </div>
+      <div class="control">
+        <input type="range" id="cooldown" min="10" max="120" value="30" step="5">
+        <span class="val" id="val-cooldown">30 帧</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>数据管理</h3>
+    <div class="row">
+      <div class="info">
+        <div class="title">历史数据统计</div>
+        <div class="desc" id="db-dets">加载中...</div>
+      </div>
+      <div class="control"><button class="danger" id="btn-clear">清空数据</button></div>
+    </div>
+    <div class="row">
+      <div class="info">
+        <div class="title">导出检测数据</div>
+        <div class="desc">将最近 200 条检测记录导出为 CSV 文件（仅在浏览器端导出）</div>
+      </div>
+      <div class="control"><button id="btn-export">导出 CSV</button></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>关于系统</h3>
+    <div class="row">
+      <div class="info"><div class="title">系统版本</div><div class="desc">智慧驭行 v2.0</div></div>
+    </div>
+    <div class="row">
+      <div class="info"><div class="title">后端服务状态</div><div class="desc" id="info-status">检测中...</div></div>
+    </div>
+    <div class="row">
+      <div class="info"><div class="title">检测模型</div><div class="desc" id="info-model">检测中...</div></div>
+    </div>
+    <div class="row">
+      <div class="info"><div class="title">模型文件</div><div class="desc" id="info-modelpath">检测中...</div></div>
+    </div>
+    <div class="row">
+      <div class="info"><div class="title">推理设备</div><div class="desc" id="info-device">检测中...</div></div>
+    </div>
+    <div class="row">
+      <div class="info"><div class="title">后端框架</div><div class="desc">Flask + PyTorch + SQLite</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* 与后端 /api/settings 的冻结契约字段一一对应 */
+var KEYS=['detect_interval_ms','conf_threshold','iou_threshold','input_size','max_detections',
+          'eye_close_frames','yawn_frames','distracted_frames','cooldown_frames'];
+var DEFAULTS={detect_interval_ms:300,conf_threshold:0.3,iou_threshold:0.5,input_size:640,max_detections:10,
+              eye_close_frames:3,yawn_frames:2,distracted_frames:5,cooldown_frames:30};
+var LS_KEY='drivesafe_settings';
+
+var settings={};
+KEYS.forEach(function(k){settings[k]=DEFAULTS[k]});
+var settingsSource='default';
+var saveTimer=null,saveInFlight=false,pendingSave=false;
+/* 只提交本次真正改动过的键（后端 PUT 支持部分更新）。
+   dirty[key] 是该键的本地修改版本号；请求在途时再次修改会使版本号前进，
+   从而不会被这次请求的成功回执误清除。 */
+var dirty={},revCounter=0;
+function markDirty(key){revCounter++;dirty[key]=revCounter}
+function takeDirty(){
+  var keys=Object.keys(dirty),body={},revs={};
+  keys.forEach(function(k){body[k]=settings[k];revs[k]=dirty[k]});
+  return {keys:keys,body:body,revs:revs};
+}
+function clearSent(sent){
+  sent.keys.forEach(function(k){if(dirty[k]===sent.revs[k])delete dirty[k]});
+}
+
+function $(id){return document.getElementById(id)}
+function esc(s){
+  return String(s===null||s===undefined?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function pickKnown(obj){
+  var o={};
+  KEYS.forEach(function(k){if(obj&&typeof obj[k]==='number'&&isFinite(obj[k]))o[k]=obj[k]});
+  return o;
+}
+function payload(){
+  var o={};
+  KEYS.forEach(function(k){o[k]=settings[k]});
+  return o;
+}
+
+/* 滑杆/下拉 ↔ 契约字段 的映射表 */
+var CTRL=[
+  {id:'interval',   key:'detect_interval_ms', toUi:function(v){return Math.round(v)},      fromUi:function(v){return parseInt(v,10)},          fmt:function(v){return v+'ms'}},
+  {id:'confidence', key:'conf_threshold',     toUi:function(v){return Math.round(v*100)},  fromUi:function(v){return parseInt(v,10)/100},      fmt:function(v){return Number(v).toFixed(2)}},
+  {id:'iou',        key:'iou_threshold',      toUi:function(v){return Math.round(v*100)},  fromUi:function(v){return parseInt(v,10)/100},      fmt:function(v){return Number(v).toFixed(2)}},
+  {id:'max-dets',   key:'max_detections',     toUi:function(v){return Math.round(v)},      fromUi:function(v){return parseInt(v,10)},          fmt:function(v){return v+' 个'}},
+  {id:'eye-close',  key:'eye_close_frames',   toUi:function(v){return Math.round(v)},      fromUi:function(v){return parseInt(v,10)},          fmt:function(v){return v+' 帧'}},
+  {id:'yawn',       key:'yawn_frames',        toUi:function(v){return Math.round(v)},      fromUi:function(v){return parseInt(v,10)},          fmt:function(v){return v+' 帧'}},
+  {id:'distracted', key:'distracted_frames',  toUi:function(v){return Math.round(v)},      fromUi:function(v){return parseInt(v,10)},          fmt:function(v){return v+' 帧'}},
+  {id:'cooldown',   key:'cooldown_frames',    toUi:function(v){return Math.round(v)},      fromUi:function(v){return parseInt(v,10)},          fmt:function(v){return v+' 帧'}}
+];
+
+function setInputSize(v){
+  var sel=$('input-size');
+  if(!sel||typeof v!=='number'||!isFinite(v)||v<=0)return;
+  var found=false;
+  for(var i=0;i<sel.options.length;i++){
+    if(parseInt(sel.options[i].value,10)===v){found=true;break}
+  }
+  if(!found){
+    var o=document.createElement('option');
+    o.value=String(v);o.textContent=v+'x'+v+'（后端当前值）';
+    sel.appendChild(o);
+  }
+  sel.value=String(v);
+}
+
+function applyToUi(){
+  CTRL.forEach(function(c){
+    var el=$(c.id),val=$('val-'+c.id);
+    if(!el)return;
+    var v=settings[c.key];
+    if(typeof v==='number'&&isFinite(v)){
+      if(v>Number(el.max))el.max=String(v);
+      if(v<Number(el.min))el.min=String(v);
+      el.value=String(c.toUi(v));
+    }
+    if(val)val.textContent=c.fmt(c.fromUi(el.value));
+  });
+  setInputSize(settings.input_size);
+}
+
+function showToast(msg,type){
+  var t=$('toast');
+  t.textContent=msg;t.className=type;
+  t.style.display='block';
+  clearTimeout(showToast._timer);
+  showToast._timer=setTimeout(function(){t.className='';t.style.display='none'},3000);
+}
+function setBanner(msg,type){
+  var b=$('banner');
+  if(!msg){b.className='banner';b.textContent='';return}
+  b.className='banner show '+type;
+  b.textContent=msg;
+}
+
+function persistLocal(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(payload()))}catch(e){console.warn('本地缓存失败',e&&e.message)}
+}
+
+function scheduleSave(){
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveSettings,500);
+}
+function scheduleSaveNow(){
+  if(saveTimer)clearTimeout(saveTimer);
+  saveSettings();
+}
+
+async function saveSettings(){
+  if(saveInFlight){pendingSave=true;return}
+  var sent=takeDirty();
+  if(!sent.keys.length)return;          /* 没有本地改动就不发请求 */
+  saveInFlight=true;
+  var status=0;                          /* 0 = 连响应都没拿到（网络层失败） */
+  try{
+    var r=await fetch('/api/settings',{
+      method:'PUT',headers:{'Content-Type':'application/json'},
+      /* 只提交改动过的键：某个键取值越界被 400 拒绝时，不会连带阻塞其它设置项 */
+      body:JSON.stringify(sent.body)
+    });
+    status=r.status;
+    if(!r.ok){
+      var msg='保存失败 (HTTP '+r.status+')';
+      try{var ej=await r.json();if(ej&&ej.error)msg=ej.error}catch(e2){msg+='（响应不是 JSON）'}
+      throw new Error(msg);
+    }
+    var d=await r.json();
+    clearSent(sent);
+    if(d&&d.settings){
+      var incoming=pickKnown(d.settings);
+      /* 只回填「当前没有本地待保存改动」的键，避免覆盖请求在途时用户的新操作 */
+      Object.keys(incoming).forEach(function(k){if(!dirty[k])settings[k]=incoming[k]});
+      applyToUi();
+    }
+    settingsSource='server';
+    persistLocal();
+    setBanner('');
+    showToast('设置已保存到后端','success');
+  }catch(e){
+    /* 4xx = 后端明确拒绝该值，重试无意义 → 清除，避免它反复阻塞其它设置；
+       网络失败 / 5xx = 可恢复 → 保留待保存标记，下次改动会一并重试 */
+    if(status>0&&status<500)clearSent(sent);
+    showToast('设置保存失败：'+((e&&e.message)||e)+'（已缓存到本地，后端未生效）','error');
+    setBanner('无法把设置写入后端：'+((e&&e.message)||e)+'。改动已缓存在浏览器本地，检测以本地值为准（刷新后可能丢失）。若是某一项取值超出后端允许范围，请把它调回范围内再保存。','warn');
+  }finally{
+    saveInFlight=false;
+    if(pendingSave){pendingSave=false;scheduleSaveNow()}
+  }
+}
+
+async function loadSettings(){
+  try{
+    var r=await fetch('/api/settings');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    if(!d||!d.settings)throw new Error('响应缺少 settings 字段');
+    settings=Object.assign({},DEFAULTS,pickKnown(d.settings));
+    settingsSource='server';
+    applyToUi();
+    setBanner('');
+  }catch(e){
+    var local=null;
+    try{local=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e2){local=null}
+    settings=Object.assign({},DEFAULTS,pickKnown(local));
+    settingsSource=local?'local':'default';
+    applyToUi();
+    setBanner('后端设置读取失败（'+((e&&e.message)||e)+'），当前显示'+(local?'浏览器本地缓存值':'默认值')+'。修改会先保存在本地，并在后端可用时尝试写入。','warn');
+  }
+  loadHealth();
+  refreshDbStats();
+}
+
+async function loadHealth(){
+  try{
+    var r=await fetch('/api/health');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var h=await r.json();
+    var loaded=(h.model_loaded===true);
+    $('info-status').textContent=(h.status==='healthy'?'正常':'降级')+(loaded?'（模型已加载）':'（模型未加载，检测不可用）');
+    var n=(typeof h.num_classes==='number')?h.num_classes:(Array.isArray(h.classes)?h.classes.length:null);
+    $('info-model').textContent='YOLO11s'+(n?(' · '+n+' 类'):'')+(Array.isArray(h.classes)&&h.classes.length?('：'+h.classes.join(', ')):'');
+    $('info-modelpath').textContent=h.model_path||'（未提供）';
+    $('info-device').textContent=h.device||'（未提供）';
+  }catch(e){
+    $('info-status').textContent='无法连接后端：'+((e&&e.message)||e);
+    $('info-model').textContent='-';
+    $('info-modelpath').textContent='-';
+    $('info-device').textContent='-';
+  }
+}
+
+async function fetchStats(){
+  var r=await fetch('/api/history?stats=1');
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return await r.json();
+}
+
+async function refreshDbStats(){
+  try{
+    var s=await fetchStats();
+    $('db-dets').textContent='共 '+(s.total_detections||0)+' 条检测记录，'+(s.total_alerts||0)+' 条告警记录';
+  }catch(e){
+    $('db-dets').textContent='统计读取失败：'+((e&&e.message)||e);
+  }
+}
+
+/* 真正的清空：DELETE /api/history?scope=all（二次确认 + 真实结果反馈） */
+async function clearData(){
+  var s=null;
+  try{s=await fetchStats()}catch(e){s=null}
+  var desc=s?('检测记录 '+(s.total_detections||0)+' 条、告警记录 '+(s.total_alerts||0)+' 条'):'全部检测与告警记录';
+  if(!confirm('确定要清空历史数据吗？此操作不可撤销！\n\n将删除：'+desc))return;
+  if(!confirm('再次确认：真的要删除'+desc+'吗？'))return;
+  var btn=$('btn-clear');
+  btn.disabled=true;btn.textContent='清空中...';
+  try{
+    var r=await fetch('/api/history?scope=all',{method:'DELETE'});
+    if(!r.ok){
+      var msg='清空失败 (HTTP '+r.status+')';
+      try{var ej=await r.json();if(ej&&ej.error)msg=ej.error}catch(e2){msg+='（响应不是 JSON）'}
+      throw new Error(msg);
+    }
+    var d=await r.json();
+    var del=(d&&d.deleted)||{};
+    showToast('已清空：检测 '+(del.detections||0)+' 条，告警 '+(del.alerts||0)+' 条','success');
+  }catch(e){
+    showToast('清空失败：'+((e&&e.message)||e),'error');
+  }finally{
+    btn.disabled=false;btn.textContent='清空数据';
+    refreshDbStats();
+  }
+}
+
+async function exportCSV(){
+  try{
+    var r=await fetch('/api/history?limit=200');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    var dets=data.detections||[];
+    if(!dets.length){showToast('暂无数据可导出','error');return}
+    var csv='时间,类别,置信度,危险等级,追踪ID\n';
+    for(var i=0;i<dets.length;i++){
+      var d=dets[i];
+      csv+=[String(d.timestamp||''),String(d.class_name||''),((d.confidence||0)*100).toFixed(0)+'%',
+            String(d.danger_level||''),'#'+String(d.track_id==null?'':d.track_id)].join(',')+'\n';
+    }
+    var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='检测记录_'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
+    showToast('导出成功（'+dets.length+' 条）','success');
+  }catch(e){
+    showToast('导出失败：'+((e&&e.message)||e),'error');
+  }
+}
+
+/* ===== 绑定控件 ===== */
+CTRL.forEach(function(c){
+  var el=$(c.id);
+  if(!el)return;
+  el.addEventListener('input',function(){
+    settings[c.key]=c.fromUi(this.value);
+    var val=$('val-'+c.id);
+    if(val)val.textContent=c.fmt(settings[c.key]);
+    persistLocal();
+    markDirty(c.key);
+    scheduleSave();
+  });
+});
+$('input-size').addEventListener('change',function(){
+  settings.input_size=parseInt(this.value,10);
+  persistLocal();
+  markDirty('input_size');
+  scheduleSaveNow();
+});
+$('btn-clear').addEventListener('click',clearData);
+$('btn-export').addEventListener('click',exportCSV);
+
+loadSettings();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# 智慧驭行驾驶行为检测系统 - 开发/测试依赖
+#
+# 安装：python -m pip install -r requirements-dev.txt
+# 运行：python -m pytest tests -v
+
+-r requirements.txt
+
+pytest==8.3.4             # 测试框架（tests/ 下的单元测试与 API 测试）

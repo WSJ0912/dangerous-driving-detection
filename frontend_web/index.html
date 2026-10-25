@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智慧驭行 - 驾驶行为检测系统</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1119;--surface:#1a1d2e;--surface2:#222639;--border:#2a2f45;
+  --text:#e2e4ec;--text2:#9096a8;--accent:#4f8cff;
+  --danger:#ff4757;--warn:#ffa502;--safe:#2ed573;
+  --radius:12px;--radius-sm:8px;--shadow:0 4px 24px rgba(0,0,0,.3);
+  --transition:.25s ease;
+}
+html,body{width:100%;min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;
+  background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;align-items:center;
+}
+#header{
+  width:100%;padding:20px 40px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+#header .brand{display:flex;align-items:center;gap:12px}
+#header .logo{
+  width:40px;height:40px;background:var(--accent);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+#header h1{font-size:18px;font-weight:700}
+#header .tagline{font-size:11px;color:var(--text2);margin-top:2px}
+#header .status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+#header .dot{width:8px;height:8px;border-radius:50%;background:var(--safe);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#hero{width:100%;max-width:900px;padding:60px 40px 40px;text-align:center}
+#hero h2{font-size:32px;font-weight:700;margin-bottom:12px}
+#hero h2 span{color:var(--accent)}
+#hero .sub{font-size:15px;color:var(--text2);line-height:1.6;max-width:600px;margin:0 auto}
+#nav-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:16px;width:100%;max-width:900px;padding:0 40px 40px;
+}
+.nav-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:28px 24px;text-decoration:none;
+  color:var(--text);transition:all var(--transition);
+  position:relative;overflow:hidden;cursor:pointer;display:block;
+}
+.nav-card::before{
+  content:'';position:absolute;top:0;left:0;width:100%;height:3px;
+  background:var(--accent);transform:scaleX(0);transition:transform var(--transition);
+}
+.nav-card:hover::before{transform:scaleX(1)}
+.nav-card:hover{background:var(--surface2);border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.nav-card .icon{
+  width:48px;height:48px;border-radius:var(--radius-sm);display:flex;
+  align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;
+  background:rgba(79,140,255,.15);color:var(--accent);
+}
+.nav-card .icon.history{background:rgba(46,213,115,.15);color:var(--safe)}
+.nav-card .icon.settings{background:rgba(255,165,2,.15);color:var(--warn)}
+.nav-card .icon.info{background:rgba(144,150,168,.15);color:var(--text2)}
+.nav-card h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.nav-card p{font-size:12px;color:var(--text2);line-height:1.5}
+#quick-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  width:100%;max-width:900px;padding:0 40px 8px;
+}
+.qs-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:16px;text-align:center;
+}
+.qs-card .num{font-size:24px;font-weight:700;line-height:1.2}
+.qs-card .num.sm{font-size:14px;word-break:break-all}
+.qs-card .num.danger{color:var(--danger)}
+.qs-card .num.info{color:var(--accent)}
+.qs-card .num.safe{color:var(--safe)}
+.qs-card .num.warn{color:var(--warn)}
+.qs-card .label{font-size:11px;color:var(--text2);margin-top:6px}
+#stat-note{
+  width:100%;max-width:900px;padding:0 40px;font-size:11px;color:var(--danger);
+  min-height:18px;line-height:18px;
+}
+#footer{
+  width:100%;padding:20px 40px;text-align:center;
+  border-top:1px solid var(--border);font-size:11px;color:var(--text2);
+  margin-top:auto;
+}
+/* 状态弹窗（替代原来直接跳转 /api/health 裸 JSON） */
+#status-modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+  z-index:1000;align-items:center;justify-content:center;padding:20px;
+}
+#status-modal.show{display:flex}
+#status-modal .modal{
+  width:100%;max-width:620px;max-height:80vh;overflow:auto;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+}
+#status-modal .modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+}
+#status-modal .modal-head h3{font-size:15px;font-weight:600}
+#status-modal .modal-head button{
+  background:none;border:none;color:var(--text2);font-size:20px;
+  line-height:1;cursor:pointer;padding:0 4px;
+}
+#status-modal .modal-head button:hover{color:var(--text)}
+#status-modal .modal-body{padding:8px 20px 20px}
+.modal-table{width:100%;border-collapse:collapse}
+.modal-table th,.modal-table td{
+  padding:10px 0;font-size:12px;text-align:left;vertical-align:top;
+  border-bottom:1px solid var(--border);word-break:break-all;
+}
+.modal-table th{color:var(--text2);font-weight:500;width:120px}
+.modal-loading,.modal-err{padding:24px 0;font-size:13px;color:var(--text2);text-align:center}
+.modal-err{color:var(--danger)}
+.retry-btn{
+  margin-top:12px;padding:6px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;
+}
+.retry-btn:hover{background:var(--border)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:640px){
+  #header{padding:16px 20px}
+  #hero{padding:40px 20px 24px}
+  #hero h2{font-size:24px}
+  #nav-grid{padding:0 20px 24px;grid-template-columns:1fr}
+  #quick-stats{grid-template-columns:1fr 1fr;padding:0 20px 8px}
+  #stat-note{padding:0 20px}
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="brand">
+    <div class="logo">&#x1f6e1;</div>
+    <div><h1>智慧驭行</h1><div class="tagline">驾驶行为检测系统</div></div>
+  </div>
+  <div class="status">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">正在检查服务状态...</span>
+  </div>
+</div>
+
+<div id="hero">
+  <h2>基于 <span>AI 视觉</span> 的智能驾驶安全监控</h2>
+  <p class="sub">实时检测疲劳驾驶、分心驾驶等危险行为，守护每一次出行安全</p>
+</div>
+
+<div id="nav-grid">
+  <a class="nav-card" href="/detect.html">
+    <div class="icon">&#x1f4f7;</div>
+    <h3>实时检测</h3>
+    <p>启动摄像头，实时分析驾驶行为，自动识别打哈欠、闭眼、吸烟、打电话等危险动作</p>
+  </a>
+  <a class="nav-card" href="/history.html">
+    <div class="icon history">&#x1f4ca;</div>
+    <h3>历史记录</h3>
+    <p>查看检测历史、告警趋势图和统计分布，回溯每一次驾驶行为分析数据</p>
+  </a>
+  <a class="nav-card" href="/settings.html">
+    <div class="icon settings">&#x2699;</div>
+    <h3>系统设置</h3>
+    <p>调整检测参数、告警阈值、数据管理等个性化配置（保存到后端）</p>
+  </a>
+  <a class="nav-card" href="#" id="nav-status" role="button">
+    <div class="icon info">&#x2139;</div>
+    <h3>系统状态</h3>
+    <p>在当前页面弹窗查看后端服务与模型加载详情（不再跳转到裸 JSON）</p>
+  </a>
+</div>
+
+<div id="quick-stats">
+  <div class="qs-card"><div class="num info" id="qs-dets">--</div><div class="label">总检测次数</div></div>
+  <div class="qs-card"><div class="num danger" id="qs-alerts">--</div><div class="label">总告警次数</div></div>
+  <div class="qs-card"><div class="num safe" id="qs-classes">--</div><div class="label">出现过的检测类别</div></div>
+  <div class="qs-card"><div class="num warn sm" id="qs-model">--</div><div class="label">检测模型</div></div>
+</div>
+<div id="stat-note"></div>
+
+<div id="footer">&copy; 2025 智慧驭行 · 基于深度学习的危险驾驶行为检测系统</div>
+
+<div id="status-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>后端系统状态（GET /api/health）</h3>
+      <button id="modal-close" title="关闭">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+function $(id){return document.getElementById(id)}
+function esc(s){
+  return String(s===null||s===undefined?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* ===== 汇总统计（真实数据；失败时显式提示，不静默留空） ===== */
+async function loadStats(){
+  var note=$('stat-note');
+  try{
+    var r=await fetch('/api/history?stats=1');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var s=await r.json();
+    $('qs-dets').textContent=(s.total_detections||0);
+    $('qs-alerts').textContent=(s.total_alerts||0);
+    $('qs-classes').textContent=Object.keys(s.detections_by_class||{}).length;
+    note.textContent='';
+  }catch(e){
+    $('qs-dets').textContent='--';
+    $('qs-alerts').textContent='--';
+    $('qs-classes').textContent='--';
+    note.textContent='统计数据加载失败：'+((e&&e.message)||e)+'（请确认后端服务已启动）';
+  }
+}
+
+/* ===== 服务/模型状态：真实读取 h.model_loaded ===== */
+async function loadHealth(){
+  var dot=$('status-dot'),txt=$('status-text');
+  try{
+    var r=await fetch('/api/health');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var h=await r.json();
+    var loaded=(h.model_loaded===true);
+    if(h.status==='healthy'&&loaded){
+      dot.style.background='var(--safe)';dot.style.animation='';
+      txt.textContent='系统正常 · 模型已加载';
+    }else{
+      dot.style.background='var(--warn)';dot.style.animation='none';
+      txt.textContent='服务正常 · 模型未加载（检测不可用）';
+    }
+    var n=(typeof h.num_classes==='number')?h.num_classes:(Array.isArray(h.classes)?h.classes.length:null);
+    $('qs-model').textContent='YOLO11s'+(n?(' · '+n+' 类'):'');
+  }catch(e){
+    dot.style.background='var(--danger)';dot.style.animation='none';
+    txt.textContent='服务未连接';
+    $('qs-model').textContent='未连接';
+  }
+}
+
+/* ===== 状态弹窗 ===== */
+async function showStatus(){
+  var body=$('modal-body');
+  $('status-modal').classList.add('show');
+  body.innerHTML='<div class="modal-loading">正在读取 /api/health ...</div>';
+  try{
+    var r=await fetch('/api/health');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var h=await r.json();
+    var n=(typeof h.num_classes==='number')?h.num_classes:(Array.isArray(h.classes)?h.classes.length:'-');
+    var rows=[
+      ['服务状态',h.status||'-'],
+      ['模型已加载',h.model_loaded===true?'是':'否'],
+      ['模型文件',h.model_path||'-'],
+      ['推理设备',h.device||'-'],
+      ['类别数量',n],
+      ['类别列表',(Array.isArray(h.classes)&&h.classes.length)?h.classes.join(', '):'-']
+    ];
+    body.innerHTML='<table class="modal-table">'+rows.map(function(row){
+      return '<tr><th>'+esc(row[0])+'</th><td>'+esc(row[1])+'</td></tr>';
+    }).join('')+'</table>';
+  }catch(e){
+    body.innerHTML='<div class="modal-err">读取失败：'+esc((e&&e.message)||e)+
+      '<div><button class="retry-btn" id="modal-retry">重试</button></div></div>';
+    var rb=$('modal-retry');
+    if(rb)rb.addEventListener('click',showStatus);
+  }
+}
+function closeStatus(){$('status-modal').classList.remove('show')}
+
+$('nav-status').addEventListener('click',function(e){e.preventDefault();showStatus()});
+$('modal-close').addEventListener('click',closeStatus);
+$('status-modal').addEventListener('click',function(e){if(e.target===this)closeStatus()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeStatus()});
+
+loadStats();
+loadHealth();
+</script>
+</body>
+</html>
