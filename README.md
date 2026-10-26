@@ -80,7 +80,7 @@
 ├── scripts/                     # start.bat / start.ps1 / start.sh 启动脚本
 ├── tests/                       # pytest 测试（数据库隔离、几何、行为逻辑、API）
 ├── 深度学习/                     # 早期临时脚本残留（111.py），非正式代码
-├── yolo11-drive/                # 第三方 YOLO 部署 demo 包（约 123 MB，已忽略，非本项目源码）
+├── yolo11-drive/                # 早前项目的 YOLO 部署目录（约 123 MB，已忽略，非本仓库源码）
 ├── release/                     # 2026-05-05 旧架构快照（约 1.2 GB，已忽略，不可直接交付）
 ├── 软著材料_初版/                # 软著申报材料（约 53 MB，含个人/单位信息，已忽略）
 ├── README.md                    # 本文件
@@ -356,35 +356,40 @@ DELETE /api/history?scope=all|detections|alerts
 - 选择 AGPL-3.0 的原因之一是本项目依赖的 **ultralytics 采用 AGPL-3.0**，
   保持一致可以避免许可冲突。
 - `models/weights/best.pt` **不在本仓库内**（`*.pt` 被 `.gitignore` 排除）。
-- **你自己训练出来的权重**没有第三方归属问题；第三方权重的来源与许可义务
-  单独说明于下一节与 [`models/README.md`](models/README.md)。
+- 本仓库自带训练链路，可在自有数据集上训练出**来源清晰**的权重；
+  早前项目那份权重的来源与许可义务见下一节与 [`models/README.md`](models/README.md)。
+- 注意：**自训不会免除 AGPL-3.0 义务** —— 用 ultralytics 训练出的 checkpoint 同样带 AGPL 标注。
 
 ---
 
 ## 8. 模型权重来源与许可
 
-`models/weights/best.pt` 的**真实来源**如下，本项目在文档、答辩、软著与论文中**不得**声称该权重出自本项目的训练过程，
-也不得声称训练数据集由本项目构建：
+`models/weights/best.pt` 是一个 8 类 YOLO11s 权重，**来自本团队早前的「智迁驭行」项目**，
+**不是本仓库 `training/` 训练链路的产物** —— 本仓库是在该项目基础上的重构版本。
+可核实的事实如下：
 
-1. **该权重不是本项目的训练产物。** 它与第三方 YOLO 部署 demo 包中的
+1. **文件一致性。** 它与该项目随包分发的
    `yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt` **字节级完全相同**
-   （同为 19,161,683 字节，SHA256 同为 `E69680C7206A2CC1E18F8EB0C64CE068CEB00018E5CC4EC0F5069A34492573BA`），
-   即本地权重是从该 demo 包中原样拷贝而来的。
-2. **checkpoint 内嵌的训练痕迹指向他人机器。** 权重 pickle 内的 `train_args.data` 为
-   `/public/home/zhanghanyu/songcm/yolo_project/399/...`（他人 Linux 集群账号路径）；
+   （19,161,683 字节，SHA256 `E69680C7206A2CC1E18F8EB0C64CE068CEB00018E5CC4EC0F5069A34492573BA`）。
+2. **checkpoint 内嵌的训练痕迹。** `train_args.data` 为
+   `/public/home/zhanghanyu/songcm/yolo_project/399/...`（团队训练时使用的 Linux 集群路径）；
    元数据 `date=2025-02-15T20:50:14`、`version=8.3.18`、`epoch=-1`、`best_fitness=None`。
-   本机不存在该路径，也不存在对应的数据集 yaml。
+   本机不存在该路径；随包分发的数据集**只有标注、没有图像**，因此无法复现该次训练。
 3. **checkpoint 内嵌许可为 AGPL-3.0**（`license: AGPL-3.0 (https://ultralytics.com/license)`）。
    ultralytics 生态采用 AGPL-3.0：**分发包含该权重的软件会触发 AGPL-3.0 义务**
-   （开源整个衍生作品，或向 Ultralytics 购买商业许可）。软著申报、对外发布或商业化之前，
-   必须与指导方/权利方确认权重来源、数据集授权与许可证义务。
-4. **仓库内没有训练数据，也没有训练脚本。** `data/raw/**`、`data/yolo_format/**` 只有 `.gitkeep`
-   占位；`training/experiments/` 为空；全仓库检索不到任何训练入口（无 `train.py`、无 `model.train` 调用）。
-   因此**无法在本机复现该权重的训练过程**。
+   （开源整个衍生作品，或向 Ultralytics 购买商业许可）。
+4. **本仓库不包含该权重的训练数据与训练产物。** `data/**` 只有 `.gitkeep`，
+   `training/experiments/` 为空，因此**无法在本仓库内复现该权重的训练过程**；
+   本仓库自带独立的训练链路，可在自有数据集上重新训练（见第 9 节与
+   [`training/README.md`](training/README.md)）。
 
-**可以如实表述的范围**：本项目实现的是"**集成第三方 8 类 YOLO11s 检测权重 + 自研的行为分析、
-告警生命周期、截图落库、历史统计与 Web 交互链路**"。
-"基于深度学习"指的正是这条"用深度学习模型做视觉检测"的集成链路，而不是"自研训练"。
+**表述建议（避免踩坑）**
+
+- 可以写：「模型权重为本团队早前项目训练所得，本仓库在其基础上完成了重构、修复与工程化。」
+- 可以写：「本仓库实现了检测后处理、目标追踪、行为分析与告警状态机、Web 交互，以及完整的训练与评估链路。」
+- 若要写「**我在本项目中训练了模型**」，请先用 `training/` 重新训练一次 ——
+  那样产出的权重才是本仓库训练链路的产物，指标也是你自己的真实数字。
+- **AGPL-3.0 义务不会因为「自己训练」而消失**：用 ultralytics 训练出的 checkpoint 同样带 AGPL 标注。
 
 ---
 
@@ -399,7 +404,7 @@ DELETE /api/history?scope=all|detections|alerts
 | 数据集 yaml | ✅ 由 `prepare_dataset.py --write-yaml` 生成，模板见 `training/data.yaml.example` |
 | `data/raw/**`、`data/yolo_format/**` | ⚠️ 仅 `.gitkeep`，**无任何图片/标注**；需自行采集或引入公开数据集 |
 | `training/experiments/` | 目录已建，训练后在此产出权重、曲线与 `results.csv` |
-| 生产权重 | ❌ 仍为第三方权重（见第 7 节），**尚无属于本项目的训练产物** |
+| 生产权重 | ⚠️ 仍为早前项目的权重（见第 8 节），**尚无出自本仓库训练链路的产物** |
 
 **训练出你自己的权重后，"基于深度学习"就可以如实写成"自研训练"了。** 三步：
 
@@ -444,7 +449,7 @@ python training/evaluate.py --weights training/experiments/<run>/weights/best.pt
 9. **软著材料缺口**：`软著材料_初版/` 中的说明书目前**零真实界面截图**（附录图全为占位）、
    源代码文档约 38–42 页（低于 60 页惯例）、系统名称/版本号在目录名、前端、软著与申报表之间
    有 4 处不一致，提交前必须统一口径并脱敏。该目录含个人信息，已被 `.gitignore` 排除。
-10. **精度未评估**：没有在本项目数据上做过精度评测；检测效果取决于第三方权重与摄像头画质。
+10. **精度未评估**：没有在本项目数据上做过精度评测；检测效果取决于所用权重与摄像头画质。
 11. **UI 命名**：设置页出现 `v2.0`、软著材料使用 `V1.0`，尚未统一。
 
 ---

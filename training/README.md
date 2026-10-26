@@ -2,10 +2,10 @@
 
 本目录让你能**训练出属于自己的权重**，从而把"自主训练"从说法变成事实。
 
-> **为什么需要它**：当前生产权重 `models/weights/best.pt` 是第三方产物
-> （与第三方 demo 包字节级相同、checkpoint 内嵌他人 HPC 路径、标注 AGPL-3.0），
-> 详见 `models/README.md`。项目里既没有数据集也没有训练代码 —— 这是本项目最大的短板。
-> 补齐训练链路后，你只要跑一次自己的训练，产出的权重和指标就都是你的。
+> **为什么需要它**：当前生产权重 `models/weights/best.pt` 来自团队早前的「智迁驭行」项目
+> （与本仓库分发的部署目录字节级相同、checkpoint 内嵌团队训练所用的集群路径、标注 AGPL-3.0），
+> 详见 `models/README.md`。本仓库此前既没有数据集也没有训练代码 —— 这是最大的短板。
+> 补齐训练链路后，你只要跑一次自己的训练，产出的权重与指标就都出自本仓库。
 
 ---
 
@@ -52,7 +52,7 @@ python training/train.py --epochs 100 --imgsz 640 --batch 16 --device 0 --name m
 python training/evaluate.py --weights training/experiments/my_yolo11s/weights/best.pt `
     --check-backend --json training/experiments/my_yolo11s/metrics.json
 
-# 4) 替换生产权重前先备份第三方权重，再替换（见 §6）
+# 4) 替换生产权重前先备份原权重，再替换（见 §6）
 ```
 
 ---
@@ -170,7 +170,7 @@ python training/prepare_dataset.py --source D:\my_dataset --format yolo --write-
 > ⚠️ **两个必须如实说明的点**：
 > 1. `open_mouth -> Yawn` 是近似映射。训练出的 mAP **不能**直接称作"打哈欠识别精度"。
 > 2. 两个数据集来自不同来源，标注风格与拍摄条件不同，存在**域偏移**；且合计仅约 1.7k 张，
->    规模远小于商用权重的训练集。**训出来的模型很可能不如仓库里那份第三方权重。**
+>    规模远小于商用权重的训练集。**训出来的模型很可能不如现在这份现成权重。**
 >    它的价值在于"这是你自己的训练产物、指标是你自己的真实数字"，而不是"效果更好"。
 >
 > 使用前请先用 `--list` 查看各数据集在 Roboflow 上标注的**许可**字段，
@@ -200,7 +200,7 @@ python training/prepare_dataset.py --source data/yolo_format --format yolo --dry
 | `--workers` | 8（Linux）/ 0（Windows） | Windows 上多进程 dataloader 容易出问题 |
 
 - **粗略时长**：3000~5000 张图、100 epoch、单张 24GB 卡大约 **2~4 小时**量级（视数据量与增强而定）。
-- **起始权重**：默认用项目内 `models/weights/best.pt`（第三方八类权重）做迁移学习，
+- **起始权重**：默认用项目内 `models/weights/best.pt`（早前项目的八类权重）做迁移学习，
   收敛最快。也可以 `--model yolo11s.pt` 从官方预训练起步（**会联网下载**）。
 - **中断续训**：
   ```powershell
@@ -233,7 +233,7 @@ python training/evaluate.py --weights <你的 best.pt> --data training/data.yaml
 ### 替换生产权重
 
 ```powershell
-# 1) 备份第三方权重（很重要，出问题能回退）
+# 1) 备份原权重（很重要，出问题能回退）
 Copy-Item models\weights\best.pt models\weights\best.thirdparty.bak.pt
 
 # 2) 用你训练出的权重替换
@@ -249,7 +249,9 @@ python backend/app.py
 
 > `*.pt` 在 `.gitignore` 中，权重不会进仓库。想把你训练的权重也放到 GitHub，
 > 需要手动 `git add -f`，并注意 19 MB 的体积。
-> 另外：自己训练的权重**不再受第三方 AGPL 约束**，这也是自训的一个附带好处。
+> ⚠️ **注意：自训不会免除 AGPL-3.0 义务。** 用 ultralytics 训练出的 checkpoint 同样带
+> AGPL 标注；若要闭源/商业使用，仍需确认许可或购买 Ultralytics 商业授权。
+> 自训的收益是**来源清晰、指标是你自己的**，而不是「摆脱许可」。
 
 ---
 

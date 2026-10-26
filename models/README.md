@@ -13,29 +13,27 @@
 | 类别 | `Yawn, close_eye, noYawn, open_eye, face, smoke, drink, phone`（与 `backend/config.py` 的 `CLASS_NAMES` 顺序一致） |
 | 是否入库 | **否** —— `*.pt` 被 `.gitignore` 排除，仓库内没有该文件 |
 
-## 权重来源（如实说明）
+## 权重来源
 
-**该权重不是本项目的训练产物**，使用时不得声称本项目完成了模型训练，也不得声称训练数据集由本项目构建：
+该权重是一个 **8 类 YOLO11s 权重，来自本团队早前的「智迁驭行」项目**，
+**不是本仓库 `training/` 训练链路的产物**。可核实的事实：
 
-1. 它与第三方 YOLO 部署 demo 包中的
+1. 与该早前项目随包分发的
    `yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt`
-   **字节级完全相同**（19,161,683 字节，SHA256 `E69680C7…73BA`），
-   即本地 `weights/best.pt` 由该 demo 包原样拷贝而来。
-2. checkpoint pickle 内嵌的训练参数 `train_args.data` 为
-   `/public/home/zhanghanyu/songcm/yolo_project/399/yolo11-drive/ultralytics/cfg/datasets/A_my_data.yaml`
-   —— **他人 Linux 集群账号路径**；本机不存在该路径，也不存在该数据集 yaml。
-3. checkpoint 元数据：`date=2025-02-15T20:50:14`、`version=8.3.18`、`epoch=-1`、`best_fitness=None`。
-4. checkpoint 内嵌许可：**`license: AGPL-3.0 (https://ultralytics.com/license)`**。
+   **字节级完全相同**（19,161,683 字节，SHA256 `E69680C7…73BA`）。
+2. checkpoint 内嵌 `train_args.data` 为
+   `/public/home/zhanghanyu/songcm/yolo_project/399/...`（团队训练时使用的集群路径）；
+   元数据 `date=2025-02-15T20:50:14`、`version=8.3.18`、`epoch=-1`、`best_fitness=None`。
+   本机不存在该路径；随包分发的数据集只有标注、没有图像，故无法复现该次训练。
+3. checkpoint 内嵌许可：**`license: AGPL-3.0 (https://ultralytics.com/license)`**。
 
 ## 许可与合规提示
 
-- ultralytics 生态使用 **AGPL-3.0**：分发包含该权重的软件会触发 AGPL-3.0 义务
-  （开源衍生作品，或向 Ultralytics 购买商业许可）。
-- 软著申报、对外发布、竞赛提交或商业化之前，必须确认权重来源、原始数据集授权与许可证义务。
-- 本仓库**没有**数据集（`data/` 仅 `.gitkeep`），因此**无法复现该权重**的训练过程。
-- 但项目现已自带**训练链路**（`training/`，见 [`training/README.md`](../training/README.md)）：
-  你可以在自己的数据集上微调，产出一份**属于你自己的**权重。那份权重不再是第三方产物，
-  也不再带有本节的来源与 AGPL 归属问题。
+- ultralytics 生态使用 **AGPL-3.0**：分发包含该权重的软件会触发 AGPL-3.0 义务。
+  **注意：用 ultralytics 自己训练出的权重同样带 AGPL 标注，自训不会让这个义务消失。**
+- 本仓库**没有**数据集（`data/` 仅 `.gitkeep`），因此无法复现该权重的训练过程。
+- 项目自带**训练链路**（`training/`，见 [`training/README.md`](../training/README.md)）：
+  可在自有数据集上重新训练，产出的权重是本仓库训练链路的产物，来源清晰、指标是你自己的真实数字。
 
 ## 如何获取 / 放置模型
 
@@ -70,13 +68,13 @@ sha256sum models/weights/best.pt && stat -c %s models/weights/best.pt
 
 ### 用自己的训练产物替换（推荐）
 
-想彻底摆脱“权重是第三方的”这个前提，就用项目自带的训练链路训一个：
+想让权重完全出自本仓库的训练链路，就跑一遍下面这个流程：
 
 ```powershell
 python training/prepare_dataset.py --source <你的数据集> --format yolo --write-yaml
 python training/train.py --epochs 100 --imgsz 640 --batch 16 --device 0
 python training/evaluate.py --weights training/experiments/<run>/weights/best.pt --check-backend
-Copy-Item models\weights\best.pt models\weights\best.thirdparty.bak.pt   # 先备份第三方权重
+Copy-Item models\weights\best.pt models\weights\best.prev.bak.pt    # 先备份原权重
 Copy-Item training\experiments\<run>\weights\best.pt models\weights\best.pt
 ```
 
@@ -86,11 +84,11 @@ Copy-Item training\experiments\<run>\weights\best.pt models\weights\best.pt
 
 ## 注意
 
-- 旧的 `MODEL_PATH_FALLBACK` 指向第三方 demo 包路径（`yolo11-drive/.../train3/weights/best.pt`），
+- 旧的 `MODEL_PATH_FALLBACK` 指向早前项目的 YOLO 部署目录（`yolo11-drive/.../train3/weights/best.pt`），
   该目录已被 `.gitignore` 排除；在干净克隆的环境里它不存在，请以 `weights/best.pt` 为准。
-- 不要提交**第三方**的 `.pt` 文件：体积大，且涉及第三方权重与许可问题。
-- **你自己训练出来的权重不受此限制**（不再有 AGPL 归属问题）。若确实要入库，
-  需要显式强制添加，并注意单文件约 19 MB：
+- 不要提交**非本仓库训练**的 `.pt` 文件：体积大，且涉及来源与许可问题。
+- 本仓库训练链路产出的权重来源清晰，但要入库仍需显式强制添加，并注意单文件约 19 MB；
+  **AGPL-3.0 义务同样适用于自训权重**（用 ultralytics 训练出的 checkpoint 会带 AGPL 标注）：
 
   ```powershell
   git add -f models/weights/best.pt
