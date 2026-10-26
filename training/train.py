@@ -213,8 +213,8 @@ def main(argv=None):
     print('2) 训练报告留档：')
     print('     python training/evaluate.py --weights %s --data %s --check-backend --json %s'
           % (best, args.data, os.path.join(save_dir, 'metrics.json')))
-    print('3) 确认无误后替换生产权重（先备份第三方权重！）：')
-    print('     备份 models/weights/best.pt -> models/weights/best.thirdparty.bak.pt')
+    print('3) 确认无误后替换生产权重（先备份原权重！）：')
+    print('     备份 models/weights/best.pt -> models/weights/best.prev.bak.pt')
     print('     再把你训练出的 best.pt 复制到 models/weights/best.pt')
     print('4) 启动服务，用真实图像跑一次端到端确认。')
     return 0

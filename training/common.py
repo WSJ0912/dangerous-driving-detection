@@ -31,7 +31,7 @@ DEFAULT_EXPERIMENTS_DIR = os.path.join(TRAINING_DIR, 'experiments')
 DEFAULT_START_WEIGHTS = os.path.join(PROJECT_ROOT, 'models', 'weights', 'best.pt')
 DEFAULT_DATASET_DIR = os.path.join(PROJECT_ROOT, 'data', 'yolo_format')
 
-# 说明：生产权重是第三方产物（详见 models/README.md）。
+# 说明：生产权重来自本团队早前的「智迁驭行」项目（详见 models/README.md）。
 # 想产出"自己的"权重，就以它为起点做微调，或改用自采数据集从 yolo11s 预训练权重起步。
 
 
@@ -166,7 +166,7 @@ def dataset_counts(data_yaml_path):
 def write_data_yaml(path, dataset_root, class_names_list=None, splits=('train', 'val')):
     """生成 ultralytics 数据 yaml，并回读校验类别顺序
 
-    ``path`` 显式写成绝对路径：本机 ultralytics 的 ``datasets_dir`` 里有第三方
+    ``path`` 显式写成绝对路径：本机 ultralytics 的 ``datasets_dir`` 里有早前项目的
     残留路径，依赖默认值会解析到别处。
     """
     names = list(class_names_list) if class_names_list else class_names()

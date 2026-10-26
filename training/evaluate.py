@@ -202,7 +202,7 @@ def main(argv=None):
 
     banner('结论')
     if payload.get('class_consistent'):
-        print('类别顺序与后端一致 —— 该权重可以安全替换生产权重（替换前请先备份第三方权重）。')
+        print('类别顺序与后端一致 —— 该权重可以安全替换生产权重（替换前请先备份原权重）。')
     return 0
 
 
