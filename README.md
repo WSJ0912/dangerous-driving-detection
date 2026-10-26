@@ -349,7 +349,19 @@ DELETE /api/history?scope=all|detections|alerts
 
 ---
 
-## 7. 模型权重来源与许可
+## 7. 许可
+
+本项目源代码以 **GNU AGPL-3.0** 发布，全文见 [`LICENSE`](LICENSE)。
+
+- 选择 AGPL-3.0 的原因之一是本项目依赖的 **ultralytics 采用 AGPL-3.0**，
+  保持一致可以避免许可冲突。
+- `models/weights/best.pt` **不在本仓库内**（`*.pt` 被 `.gitignore` 排除）。
+- **你自己训练出来的权重**没有第三方归属问题；第三方权重的来源与许可义务
+  单独说明于下一节与 [`models/README.md`](models/README.md)。
+
+---
+
+## 8. 模型权重来源与许可
 
 `models/weights/best.pt` 的**真实来源**如下，本项目在文档、答辩、软著与论文中**不得**声称该权重出自本项目的训练过程，
 也不得声称训练数据集由本项目构建：
@@ -376,7 +388,7 @@ DELETE /api/history?scope=all|detections|alerts
 
 ---
 
-## 8. 数据集与训练现状
+## 9. 数据集与训练现状
 
 **训练链路已经具备**（`training/`，完整说明见 [`training/README.md`](training/README.md)），
 **但数据集仍需你自己准备** —— 仓库里没有任何真实图像与标注。
@@ -411,7 +423,7 @@ python training/evaluate.py --weights training/experiments/<run>/weights/best.pt
 
 ---
 
-## 9. 已知限制与风险
+## 10. 已知限制与风险
 
 1. **模型非自研**：见第 7 节；涉及 AGPL-3.0 义务与来源合规，对外表述必须如实。
 2. **本机无法正式训练**：训练链路已具备（`training/`），但本机**无 NVIDIA GPU**（`torch.cuda.is_available()` 为 False），只能跑 `--smoke` 验证管道；正式训练需在 GPU 上跑。此外数据集仍需自行准备（见第 8 节）。
@@ -437,7 +449,7 @@ python training/evaluate.py --weights training/experiments/<run>/weights/best.pt
 
 ---
 
-## 10. 测试
+## 11. 测试
 
 ```bash
 python -m pytest tests -v
@@ -458,7 +470,7 @@ API 测试用 test_client + 检测器桩，不加载 torch。
 
 ---
 
-## 11. 其他文档
+## 12. 其他文档
 
 | 文件 | 内容 |
 |------|------|
@@ -471,7 +483,7 @@ API 测试用 test_client + 检测器桩，不加载 torch。
 
 ---
 
-## 12. 常见问题
+## 13. 常见问题
 
 | 现象 | 原因与处理 |
 |------|------------|
