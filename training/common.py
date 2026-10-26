@@ -217,3 +217,27 @@ def resolve_device(requested=None):
         return '0' if torch.cuda.is_available() else 'cpu'
     except Exception:
         return 'cpu'
+
+
+def imwrite_safe(path, img):
+    """把图像写到可能含非 ASCII 字符的路径上（并保证真的写成功）
+
+    为什么不用 ``cv2.imwrite``：在 Windows 上遇到中文路径时它**返回 False 而不抛异常**，
+    于是"图没写出来"这件事会一路静默到训练阶段才以"划分里没有图片"的面目出现。
+    本项目路径本身就含中文，这个坑已经实际踩到过一次。
+
+    改用 ``cv2.imencode`` + ``ndarray.tofile``（按字节写，绕开 Windows 的 ANSI 路径接口），
+    写完再回读校验文件存在且非空，失败就抛错而不是返回假成功。
+    """
+    import cv2
+    ext = os.path.splitext(path)[1] or '.jpg'
+    ok, buf = cv2.imencode(ext, img)
+    if not ok:
+        raise IOError('图像编码失败（扩展名 %s）: %s' % (ext, path))
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    buf.tofile(path)
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        raise IOError('图像写入失败（路径可能含非 ASCII 字符）: %s' % path)
+    return True

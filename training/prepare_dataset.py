@@ -38,6 +38,7 @@ from common import (  # noqa: E402
     PROJECT_ROOT,
     banner,
     write_data_yaml,
+    imwrite_safe,
 )
 
 try:
@@ -173,11 +174,25 @@ def make_synthetic(out_dir, n_train=16, n_val=4, size=320, seed=0, write_yaml=Fa
             lab_path = os.path.join(out_dir, split, 'labels', name + '.txt')
             os.makedirs(os.path.dirname(img_path), exist_ok=True)
             os.makedirs(os.path.dirname(lab_path), exist_ok=True)
-            cv2.imwrite(img_path, img)
+            imwrite_safe(img_path, img)
             with open(lab_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(lines) + '\n')
 
-    print('已生成: %s  (train=%d, val=%d)' % (out_dir, n_train, n_val))
+    # 回读磁盘核对：cv2.imwrite 曾在中文路径下静默失败（标签写了、图片没写），
+    # 结果直到训练阶段才以"划分里没有图片"暴露出来。这里直接把它拦在生成阶段。
+    problems = []
+    for split, want in (('train', n_train), ('val', n_val)):
+        d = os.path.join(out_dir, split, 'images')
+        got = len([f for f in os.listdir(d)
+                   if f.lower().endswith(('.jpg', '.jpeg', '.png'))]) if os.path.isdir(d) else 0
+        if got != want:
+            problems.append('%s 期望 %d 张、实际 %d 张' % (split, want, got))
+    if problems:
+        print('\n[错误] 合成数据写盘不完整：%s' % '；'.join(problems))
+        print('       最常见原因是输出路径含非 ASCII 字符（例如中文目录）。')
+        print('       已改用 imwrite_safe 仍失败时，请把 --out 指到纯英文路径再试。')
+        return 3
+    print('已生成: %s  (train=%d, val=%d) —— 已回读磁盘核对' % (out_dir, n_train, n_val))
     if write_yaml:
         path = write_data_yaml(DEFAULT_DATA_YAML, out_dir)
         print('已生成数据 yaml: %s' % path)
