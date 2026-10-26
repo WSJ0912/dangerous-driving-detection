@@ -2,61 +2,101 @@
 
 ## 生产模型
 
+**该权重由本仓库的 `training/` 训练链路产出，是作者本人训练的成果**，不是外部获取的现成模型。
+
 | 项目 | 值 |
 |------|-----|
 | 文件 | `weights/best.pt` |
-| 架构 | YOLO11s（ultralytics） |
+| 架构 | YOLO11s（ultralytics 8.4.21 + PyTorch 2.8.0+cu128） |
 | 类别数 | 8 |
 | 推理输入尺寸 | **640 × 640**（letterbox，见 `backend/config.py` 的 `DEFAULT_INPUT_SIZE=640`） |
-| 大小 | 19,161,683 字节 |
-| SHA256 | `E69680C7206A2CC1E18F8EB0C64CE068CEB00018E5CC4EC0F5069A34492573BA` |
-| 类别 | `Yawn, close_eye, noYawn, open_eye, face, smoke, drink, phone`（与 `backend/config.py` 的 `CLASS_NAMES` 顺序一致） |
+| 大小 | 19,170,394 字节 |
+| SHA256 | `7AD2B81B5B1DA4F33616D179E154F73C8AA5B8339AF4F2ECD2AB2B6097FC5500` |
+| 类别 | `Yawn, close_eye, noYawn, open_eye, face, smoke, drink, phone`（与 `backend/config.py` 的 `CLASS_NAMES` 顺序一致，已由 `evaluate.py --check-backend` 校验） |
 | 是否入库 | **否** —— `*.pt` 被 `.gitignore` 排除，仓库内没有该文件 |
 
-## 权重来源
+## 训练配方（可复现）
 
-该权重是一个 **8 类 YOLO11s 权重，来自本团队早前的「智迁驭行」项目**，
-**不是本仓库 `training/` 训练链路的产物**。可核实的事实：
+| 项 | 值 |
+|------|-----|
+| 起始权重 | `yolo11s.pt`（ultralytics 官方 **COCO 预训练**，首次运行自动下载） |
+| 训练数据 | 8 类驾驶行为检测数据集，**6074 张 / 10,600 个标注框**（train 4572 / val 1502） |
+| 轮数 / 尺寸 / 批大小 | **100 epoch / imgsz 640 / batch 16** |
+| 设备 | 单卡 GPU（租用 NVIDIA RTX 3080 Ti 12GB），fp16 AMP |
+| 复现命令 | `python training/train.py --data <data.yaml> --model yolo11s.pt --epochs 100 --imgsz 640 --batch 16 --device 0` |
 
-1. 与该早前项目随包分发的
-   `yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt`
-   **字节级完全相同**（19,161,683 字节，SHA256 `E69680C7…73BA`）。
-2. checkpoint 内嵌 `train_args.data` 为
-   `/public/home/zhanghanyu/songcm/yolo_project/399/...`（团队训练时使用的集群路径）；
-   元数据 `date=2025-02-15T20:50:14`、`version=8.3.18`、`epoch=-1`、`best_fitness=None`。
-   本机不存在该路径；随包分发的数据集只有标注、没有图像，故无法复现该次训练。
-3. checkpoint 内嵌许可：**`license: AGPL-3.0 (https://ultralytics.com/license)`**。
+## 实测指标（验证集 1502 张 / 2229 个实例）
+
+| 类别 | mAP50 | mAP50-95 | 实例数 |
+|------|-------|----------|--------|
+| `close_eye` | **0.7734** | 0.4679 | 1438 |
+| `phone` | 0.8437 | 0.4652 | 1599 |
+| `smoke` | 0.6842 | 0.2851 | 1184 |
+| `open_eye` | 0.6153 | 0.3070 | 1300 |
+| `Yawn` | 0.4989 | 0.3494 | 213 |
+| `noYawn` | 0.3121 | 0.2223 | 162 |
+| `drink` | 0.9347 | 0.5940 | 1047 |
+| `face` | 0.9387 | 0.5790 | 3657 |
+| **总体** | **0.700** | **0.409** | 10,600 |
+
+完整留档见 [`../training/experiments/team_ds_gpu_yolo11s_100ep/`](../training/experiments/team_ds_gpu_yolo11s_100ep/)：
+`metrics.json`（含权重 SHA256 与类别一致性布尔值）、`results.csv`（100 轮逐轮指标）、
+混淆矩阵与 PR/F1 曲线。
+
+> **已知短板（如实说明）**：`Yawn`（213 个实例）与 `noYawn`（162 个）样本极少，
+> 前者 mAP50 仅 0.4989、后者 0.3121 —— 而这两类恰是疲劳判定最依赖的。
+> 提升只有补数据一条路：需要更多不同光照、眼镜、侧脸、夜间的驾驶座实拍。
+
+## 权重来源与归属
+
+- **本权重由作者本人在本仓库的训练链路上训练产出**（配方与指标见上）。
+- 训练数据是一个 8 类驾驶行为检测数据集，由作者参与建设的团队项目「智迁驭行」所构建。
+  数据本身不在本仓库内（`data/**` 被 `.gitignore` 排除）。
+- checkpoint 内嵌许可：**`license: AGPL-3.0 (https://ultralytics.com/license)`**。
+
+### 历史权重（已备份，不参与对外表述）
+
+`weights/best.prev.bak.pt` 是替换前的旧权重，属于上述团队项目早前的训练产物，
+**不是本仓库训练链路的产物**，保留它只为出问题能回退：
+
+- 与该项目随包分发的 `yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt`
+  字节级完全相同（19,161,683 字节，SHA256 `E69680C7…73BA`）；
+- 同一验证集上总体 mAP50 为 **0.6665**，低于现役权重的 0.700。
 
 ## 许可与合规提示
 
 - ultralytics 生态使用 **AGPL-3.0**：分发包含该权重的软件会触发 AGPL-3.0 义务。
-  **注意：用 ultralytics 自己训练出的权重同样带 AGPL 标注，自训不会让这个义务消失。**
-- 本仓库**没有**数据集（`data/` 仅 `.gitkeep`），因此无法复现该权重的训练过程。
-- 项目自带**训练链路**（`training/`，见 [`training/README.md`](../training/README.md)）：
-  可在自有数据集上重新训练，产出的权重是本仓库训练链路的产物，来源清晰、指标是你自己的真实数字。
+  **权重是自训的也一样** —— 用 ultralytics 训练出的 checkpoint 会带 AGPL 标注。
+  本项目源代码已按 AGPL-3.0 发布（见 [`LICENSE`](../LICENSE)），与之一致。
+- 数据集不在仓库内，因此**他人克隆后无法直接复现训练**，需自备同结构数据集。
 
-## 如何获取 / 放置模型
+## 关于权重文件的分发
 
-克隆仓库后 `models/weights/` 内不会有 `.pt` 文件（已被 `.gitignore` 排除），需要自行放置：
+`models/weights/best.pt` **不随仓库分发**（`*.pt` 被 `.gitignore` 排除）。
+它由作者在本仓库的训练链路上训练产出，上面表里的 SHA256 用于**核对"你手上这份是不是同一份"**。
 
-```text
-models/weights/best.pt
-```
+克隆本仓库后，有三种选择：
 
-放置后核对：
+1. **自己训练一份（推荐）** —— 按 [`training/README.md`](../training/README.md) 准备好
+   同结构的 8 类数据集后跑 `train.py`。产出的权重属于你自己的训练链路，
+   类别顺序会被 `train.py` 与 `evaluate.py --check-backend` 强制校验，不会张冠李戴。
+2. **向作者索取现成权重** —— 放到 `models/weights/best.pt`，然后用下面的命令核对：
 
-```powershell
-# Windows PowerShell
-Get-FileHash -Algorithm SHA256 .\models\weights\best.pt
-(Get-Item .\models\weights\best.pt).Length
-```
+   ```powershell
+   # Windows PowerShell
+   Get-FileHash -Algorithm SHA256 .\models\weights\best.pt
+   (Get-Item .\models\weights\best.pt).Length
+   ```
 
-```bash
-# Linux / macOS
-sha256sum models/weights/best.pt && stat -c %s models/weights/best.pt
-```
+   ```bash
+   # Linux / macOS
+   sha256sum models/weights/best.pt && stat -c %s models/weights/best.pt
+   ```
 
-大小与 SHA256 与上表一致，才可认为是同一份权重。
+   大小与 SHA256 与上表一致，才可认为是同一份权重。
+3. **用任意同类别顺序的 8 类 YOLO11 权重** —— 但**必须**先跑
+   `python training/evaluate.py --weights <你的.pt> --check-backend`，
+   顺序不一致时该命令以退出码 3 失败。这一步不能省。
 
 ## 更新 / 替换模型
 
@@ -66,9 +106,9 @@ sha256sum models/weights/best.pt && stat -c %s models/weights/best.pt
    `CLASS_NAMES`、`DANGER_LEVELS`（以及需要时的 `ALERT_MESSAGES`）。
 4. 重启服务，用 `GET /api/health` 确认 `model_loaded=true`、`num_classes` 与 `classes` 是否符合预期。
 
-### 用自己的训练产物替换（推荐）
+### 换数据集后重新训练并替换（推荐）
 
-想让权重完全出自本仓库的训练链路，就跑一遍下面这个流程：
+**现役的 `best.pt` 就是这样产出的。** 换一份数据集时按下面流程重跑：
 
 ```powershell
 python training/prepare_dataset.py --source <你的数据集> --format yolo --write-yaml

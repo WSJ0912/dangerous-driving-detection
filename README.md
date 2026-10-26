@@ -8,7 +8,9 @@
 > 克隆后请按「快速开始」第 3 步放置 `models/weights/best.pt`，否则服务能启动但检测不可用 ——
 > 该文件的获取方式、校验值与来源说明见 [`models/README.md`](models/README.md)。
 > 项目自带完整的[训练链路](training/README.md)：可以准备数据集、训练、评估并把关类别一致性，
-> 然后用**你自己训练出的权重**替换它。
+> 然后用**你自己训练出的权重**替换它。当前现役权重即由该链路训练产出（见第 8 节）。
+>
+> **作者 / 版权**：WSJ0912，本项目为个人项目，源代码以 AGPL-3.0 发布（见 [`LICENSE`](LICENSE)）。
 
 ---
 
@@ -27,7 +29,7 @@
 | 用户/权限体系 | ❌ 未实现 | 无登录、无鉴权，**不要部署到公网** |
 | 生产级部署 | ❌ 未实现 | 仅 Flask 开发服务器；无 WSGI 容器、无 Docker、无反向代理配置 |
 | 模型训练链路 | ✅ 已具备 | `training/`：数据集准备与标注校验、训练、逐类评估与**类别顺序把关**、ONNX 导出（见 [`training/README.md`](training/README.md)） |
-| 数据集 | ❌ 仓库内无 | 需自行采集或引入公开数据集；`data/yolo_format/` 目前为空 |
+| 数据集 | ⚠️ 不入库 | 训练所用数据集（6074 张 / 10,600 框）不在仓库内，`data/**` 被 `.gitignore` 排除 |
 
 ---
 
@@ -362,34 +364,41 @@ DELETE /api/history?scope=all|detections|alerts
 
 ---
 
-## 8. 模型权重来源与许可
+## 8. 模型权重：作者本人训练所得
 
-`models/weights/best.pt` 是一个 8 类 YOLO11s 权重，**来自本团队早前的「智迁驭行」项目**，
-**不是本仓库 `training/` 训练链路的产物** —— 本仓库是在该项目基础上的重构版本。
-可核实的事实如下：
+`models/weights/best.pt` **由本仓库的 [`training/`](training/README.md) 训练链路产出，是作者本人训练的成果**，
+不再是外部获取的现成模型。
 
-1. **文件一致性。** 它与该项目随包分发的
-   `yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt` **字节级完全相同**
-   （19,161,683 字节，SHA256 `E69680C7206A2CC1E18F8EB0C64CE068CEB00018E5CC4EC0F5069A34492573BA`）。
-2. **checkpoint 内嵌的训练痕迹。** `train_args.data` 为
-   `/public/home/zhanghanyu/songcm/yolo_project/399/...`（团队训练时使用的 Linux 集群路径）；
-   元数据 `date=2025-02-15T20:50:14`、`version=8.3.18`、`epoch=-1`、`best_fitness=None`。
-   本机不存在该路径；随包分发的数据集**只有标注、没有图像**，因此无法复现该次训练。
-3. **checkpoint 内嵌许可为 AGPL-3.0**（`license: AGPL-3.0 (https://ultralytics.com/license)`）。
-   ultralytics 生态采用 AGPL-3.0：**分发包含该权重的软件会触发 AGPL-3.0 义务**
-   （开源整个衍生作品，或向 Ultralytics 购买商业许可）。
-4. **本仓库不包含该权重的训练数据与训练产物。** `data/**` 只有 `.gitkeep`，
-   `training/experiments/` 为空，因此**无法在本仓库内复现该权重的训练过程**；
-   本仓库自带独立的训练链路，可在自有数据集上重新训练（见第 9 节与
-   [`training/README.md`](training/README.md)）。
+| 项 | 值 |
+|------|-----|
+| 架构 | YOLO11s（ultralytics 8.4.21 + PyTorch 2.8.0+cu128） |
+| 类别 | 8 类，顺序与 `backend/config.py` 的 `CLASS_NAMES` 完全一致（已由 `--check-backend` 校验） |
+| 文件 | 19,170,394 字节，SHA256 `7AD2B81B…5500` |
+| 起始权重 | `yolo11s.pt`（ultralytics 官方 **COCO 预训练**） |
+| 训练数据 | 8 类驾驶行为检测数据集，6074 张 / 10,600 框（作者参与建设的团队项目「智迁驭行」所构建；数据不入库） |
+| 训练配置 | **100 epoch / imgsz 640 / batch 16**，单卡 GPU，fp16 AMP |
+| 实测指标 | 验证集 1502 张 / 2229 实例：**mAP50 0.700、mAP50-95 0.409**；闭眼类 `close_eye` **0.7734** |
 
-**表述建议（避免踩坑）**
+复现命令（详见 [`training/README.md`](training/README.md)）：
 
-- 可以写：「模型权重为本团队早前项目训练所得，本仓库在其基础上完成了重构、修复与工程化。」
-- 可以写：「本仓库实现了检测后处理、目标追踪、行为分析与告警状态机、Web 交互，以及完整的训练与评估链路。」
-- 若要写「**我在本项目中训练了模型**」，请先用 `training/` 重新训练一次 ——
-  那样产出的权重才是本仓库训练链路的产物，指标也是你自己的真实数字。
-- **AGPL-3.0 义务不会因为「自己训练」而消失**：用 ultralytics 训练出的 checkpoint 同样带 AGPL 标注。
+```bash
+python training/train.py --data <data.yaml> --model yolo11s.pt \
+    --epochs 100 --imgsz 640 --batch 16 --device 0
+```
+
+逐类指标、混淆矩阵、100 轮 `results.csv` 与含 SHA256 的 `metrics.json` 见
+[`training/experiments/team_ds_gpu_yolo11s_100ep/`](training/experiments/team_ds_gpu_yolo11s_100ep/)。
+
+**可以如实表述的范围**
+
+- 「本项目的模型由我在本项目的训练链路上训练产出，起点是官方 COCO 预训练权重，
+  100 轮、imgsz 640，验证集 mAP50 为 0.700，闭眼类 0.7734。」—— **属实，且有上述留档为证。**
+- 训练数据由作者参与建设的团队数据集构建，**不声称数据集由本项目独自构建**。
+- **AGPL-3.0 义务不会因为自训而消失**：用 ultralytics 训练出的 checkpoint 同样带 AGPL 标注；
+  本项目源代码已按 AGPL-3.0 发布（见 [`LICENSE`](LICENSE)）。
+
+> 替换前的旧权重（团队项目早前训练所得，mAP50 0.6665）保留在
+> `models/weights/best.prev.bak.pt` 以便回退，不参与对外表述。
 
 ---
 
@@ -404,7 +413,7 @@ DELETE /api/history?scope=all|detections|alerts
 | 数据集 yaml | ✅ 由 `prepare_dataset.py --write-yaml` 生成，模板见 `training/data.yaml.example` |
 | `data/raw/**`、`data/yolo_format/**` | ⚠️ 仅 `.gitkeep`，**无任何图片/标注**；需自行采集或引入公开数据集 |
 | `training/experiments/` | 目录已建，训练后在此产出权重、曲线与 `results.csv` |
-| 生产权重 | ⚠️ 仍为早前项目的权重（见第 8 节），**尚无出自本仓库训练链路的产物** |
+| 生产权重 | ✅ **由本仓库训练链路产出**（作者本人训练，100ep/640，mAP50 0.700），见第 8 节 |
 
 **训练出你自己的权重后，"基于深度学习"就可以如实写成"自研训练"了。** 三步：
 
