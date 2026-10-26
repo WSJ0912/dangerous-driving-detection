@@ -145,9 +145,45 @@ python training/prepare_dataset.py --source D:\my_dataset --format yolo --write-
 | **公开数据集 + 类别映射** | Roboflow Universe 上有大量 driver behavior / drowsiness / distracted driver 数据集；StateFarm Distracted Driver、DMD 驾驶员分心数据集也是常见选择。**注意：它们的类别定义通常不是这 8 类**，需要写映射表（或只取与你 8 类重合的部分），映射错位正是下面 `--check-backend` 要拦的问题 |
 | **混合** | 公开数据打底 + 自采数据补稀有类（`close_eye` / `Yawn` 通常最缺） |
 
-> 我**没有**在这里承诺任何具体下载链接 —— 公开数据集的可访问性会变，
-> 请自行在 Roboflow Universe / Kaggle / 论文附带链接上确认可用性与**授权条款**。
-> 用别人的数据要看清许可证，这一点在软著/论文里同样会被问到。
+### 4.1 一条已经落地的路子：Roboflow Universe 公开检测数据集
+
+`training/fetch_dataset.py` 已内置两个**公开的、带检测框**的数据集，合起来正好覆盖本项目 8 类：
+
+| 数据集 | 规模 | 提供的类别 |
+|---|---|---|
+| [Driver Drowsiness](https://universe.roboflow.com/computer-vision-tznlp/driver-drowsiness-q3msq-ddgj8) | 674 张 | `face`、`open_eye`、`closed_eye`、`open_mouth`、`closed_mouth` |
+| [Reckless driver detection](https://universe.roboflow.com/ztai/reckless-driver-detection-iz7ob-apeue) | 1k 张 | `Phone`、`Cigarette`、`Drinking`（等） |
+
+类别映射（脚本里写死并可审计）：
+
+| 本项目类别 | 来源类别 | 说明 |
+|---|---|---|
+| `face` | `face` | 直接对应 |
+| `open_eye` | `open_eye` | 直接对应 |
+| `close_eye` | `closed_eye` | 直接对应 |
+| `Yawn` | `open_mouth` | **近似**：张嘴 ≠ 打哈欠 |
+| `noYawn` | `closed_mouth` | **近似** |
+| `phone` | `Phone` | 直接对应 |
+| `smoke` | `Cigarette` | 直接对应 |
+| `drink` | `Drinking` | 直接对应 |
+
+> ⚠️ **两个必须如实说明的点**：
+> 1. `open_mouth -> Yawn` 是近似映射。训练出的 mAP **不能**直接称作"打哈欠识别精度"。
+> 2. 两个数据集来自不同来源，标注风格与拍摄条件不同，存在**域偏移**；且合计仅约 1.7k 张，
+>    规模远小于商用权重的训练集。**训出来的模型很可能不如仓库里那份第三方权重。**
+>    它的价值在于"这是你自己的训练产物、指标是你自己的真实数字"，而不是"效果更好"。
+>
+> 使用前请先用 `--list` 查看各数据集在 Roboflow 上标注的**许可**字段，
+> 确认允许你的使用方式；论文/答辩中应引用其 BibTeX。
+
+密钥读取方式（**不会被打印或写入任何文件**）：环境变量 `ROBOFLOW_API_KEY`，或
+`%USERPROFILE%\.roboflow_key` 文件（单行密钥）。
+
+```powershell
+python training/fetch_dataset.py --list       # 先看版本、类别与许可
+python training/fetch_dataset.py --download   # 下载 -> 重映射 -> 合并 -> 写 data.yaml
+python training/prepare_dataset.py --source data/yolo_format --format yolo --dry-run
+```
 
 ---
 
@@ -226,6 +262,7 @@ python backend/app.py
 | `train.py` | 训练入口；`--smoke` 为 CPU 冒烟预设；训练前做类别闸门 |
 | `evaluate.py` | 逐类指标 + **类别顺序把关**；`--json` 留档 |
 | `export.py` | 导出 ONNX / TorchScript（生产后端目前只加载 `.pt`，此项为将来部署预留） |
+| `fetch_dataset.py` | 从 Roboflow Universe 拉取公开**检测**数据集，按映射重标为本项目 8 类并合并 |
 | `data.yaml.example` | 数据 yaml 模板 |
 
 ## 8. 常见问题
