@@ -1,0 +1,28 @@
+# 数据 yaml 模板（ultralytics 格式）
+#
+# 说明：
+#   - 实际使用的文件是 training/data.yaml，由
+#     `python training/prepare_dataset.py --write-yaml` 自动生成，
+#     它会写入绝对路径并回读校验类别顺序，不需要手写。
+#   - 本文件只是模板/参考，方便你理解字段含义。
+#   - 类别顺序【必须】与 backend/config.py::CLASS_NAMES 完全一致：
+#     索引错位会导致上线后检测类别张冠李戴，而且不会报任何错。
+#     用 `python training/evaluate.py --check-backend` 可以校验。
+#
+# path 必须写成绝对路径：本机 ultralytics 的 datasets_dir 里可能残留
+# 别人的路径，依赖默认值会把数据解析到别处。
+
+path: D:/基于深度学习的危险驾驶行为检测系统/data/yolo_format
+train: train/images
+val: val/images
+
+nc: 8
+names:
+  0: Yawn
+  1: close_eye
+  2: noYawn
+  3: open_eye
+  4: face
+  5: smoke
+  6: drink
+  7: phone

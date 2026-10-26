@@ -32,7 +32,10 @@
 - ultralytics 生态使用 **AGPL-3.0**：分发包含该权重的软件会触发 AGPL-3.0 义务
   （开源衍生作品，或向 Ultralytics 购买商业许可）。
 - 软著申报、对外发布、竞赛提交或商业化之前，必须确认权重来源、原始数据集授权与许可证义务。
-- 本仓库**没有**数据集（`data/` 仅 `.gitkeep`）、**没有**训练脚本，因此无法在本机复现该权重的训练。
+- 本仓库**没有**数据集（`data/` 仅 `.gitkeep`），因此**无法复现该权重**的训练过程。
+- 但项目现已自带**训练链路**（`training/`，见 [`training/README.md`](../training/README.md)）：
+  你可以在自己的数据集上微调，产出一份**属于你自己的**权重。那份权重不再是第三方产物，
+  也不再带有本节的来源与 AGPL 归属问题。
 
 ## 如何获取 / 放置模型
 
@@ -65,8 +68,30 @@ sha256sum models/weights/best.pt && stat -c %s models/weights/best.pt
    `CLASS_NAMES`、`DANGER_LEVELS`（以及需要时的 `ALERT_MESSAGES`）。
 4. 重启服务，用 `GET /api/health` 确认 `model_loaded=true`、`num_classes` 与 `classes` 是否符合预期。
 
+### 用自己的训练产物替换（推荐）
+
+想彻底摆脱“权重是第三方的”这个前提，就用项目自带的训练链路训一个：
+
+```powershell
+python training/prepare_dataset.py --source <你的数据集> --format yolo --write-yaml
+python training/train.py --epochs 100 --imgsz 640 --batch 16 --device 0
+python training/evaluate.py --weights training/experiments/<run>/weights/best.pt --check-backend
+Copy-Item models\weights\best.pt models\weights\best.thirdparty.bak.pt   # 先备份第三方权重
+Copy-Item training\experiments\<run>\weights\best.pt models\weights\best.pt
+```
+
+`--check-backend` 会校验新权重的类别顺序与 `backend/config.py::CLASS_NAMES` 完全一致
+（不一致时以退出码 3 失败）。**这一步不能省** —— 类别顺序错位不会报任何错，
+只会让每个类别的中文名张冠李戴。
+
 ## 注意
 
 - 旧的 `MODEL_PATH_FALLBACK` 指向第三方 demo 包路径（`yolo11-drive/.../train3/weights/best.pt`），
   该目录已被 `.gitignore` 排除；在干净克隆的环境里它不存在，请以 `weights/best.pt` 为准。
-- 不要提交 `.pt` 文件：体积大，且涉及第三方权重与许可问题。
+- 不要提交**第三方**的 `.pt` 文件：体积大，且涉及第三方权重与许可问题。
+- **你自己训练出来的权重不受此限制**（不再有 AGPL 归属问题）。若确实要入库，
+  需要显式强制添加，并注意单文件约 19 MB：
+
+  ```powershell
+  git add -f models/weights/best.pt
+  ```

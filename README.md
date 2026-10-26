@@ -65,7 +65,15 @@
 │   ├── README.md                # 模型说明（来源/许可/替换方式）
 │   └── weights/best.pt          # 8 类 YOLO11s 权重（**不在仓库中**，需自行放置）
 ├── data/                        # 数据集目录约定（raw/、yolo_format/ 仅 .gitkeep，**无数据**）
-├── training/experiments/        # 训练产物目录（**空**，无任何训练结果）
+├── training/                    # 训练链路（用来训练"你自己的"权重）
+│   ├── README.md                # 训练全流程：数据准备 → 训练 → 评估 → 替换权重
+│   ├── common.py                # 公共模块（类别定义直接取自 backend/config.py）
+│   ├── prepare_dataset.py       # 数据集转换 / 校验 / 切分（--synthetic 生成冒烟假数据）
+│   ├── train.py                 # 训练入口（--smoke 为 CPU 冒烟预设）
+│   ├── evaluate.py              # 逐类指标 + 类别顺序把关（--check-backend）
+│   ├── export.py                # 导出 ONNX / TorchScript（可选，为将来部署预留）
+│   ├── data.yaml.example        # 数据 yaml 模板
+│   └── experiments/             # 训练产物（已忽略）
 ├── scripts/                     # start.bat / start.ps1 / start.sh 启动脚本
 ├── tests/                       # pytest 测试（数据库隔离、几何、行为逻辑、API）
 ├── 深度学习/                     # 早期临时脚本残留（111.py），非正式代码
@@ -367,23 +375,43 @@ DELETE /api/history?scope=all|detections|alerts
 
 ## 8. 数据集与训练现状
 
+**训练链路已经具备**（`training/`，完整说明见 [`training/README.md`](training/README.md)），
+**但数据集仍需你自己准备** —— 仓库里没有任何真实图像与标注。
+
 | 项目 | 现状 |
 |------|------|
-| `data/raw/**`、`data/yolo_format/**` | 仅 `.gitkeep`，**无任何图片/标注** |
-| 数据集 yaml（如 `A_my_data.yaml`） | 仓库内**不存在**（权重内引用的是他人集群路径） |
-| `training/experiments/` | **空目录**（只有 `.gitkeep`） |
-| 训练脚本 | **不存在**（全仓库无 `train.py`，无 `model.train`） |
-| 训练结果（`results.csv`、`args.yaml` 等） | 仅存在于第三方 demo 包 `yolo11-drive/` 内，**不是本项目的训练产物** |
+| 训练脚本 | ✅ `training/{prepare_dataset,train,evaluate,export}.py` |
+| 数据集 yaml | ✅ 由 `prepare_dataset.py --write-yaml` 生成，模板见 `training/data.yaml.example` |
+| `data/raw/**`、`data/yolo_format/**` | ⚠️ 仅 `.gitkeep`，**无任何图片/标注**；需自行采集或引入公开数据集 |
+| `training/experiments/` | 目录已建，训练后在此产出权重、曲线与 `results.csv` |
+| 生产权重 | ❌ 仍为第三方权重（见第 7 节），**尚无属于本项目的训练产物** |
 
-目录约定与 YOLO 标注格式说明见 [`data/README.md`](data/README.md)。
-如果将来要自己训练，需要先准备数据集与 `data.yaml`，再自建训练脚本（本仓库不提供）。
+**训练出你自己的权重后，"基于深度学习"就可以如实写成"自研训练"了。** 三步：
+
+```powershell
+# 1) 准备并校验数据集（会检查标注格式、类别号、逐类实例数）
+python training/prepare_dataset.py --source <你的数据集> --format yolo --write-yaml
+
+# 2) 训练（正式训练需要在有 NVIDIA GPU 的机器上；本机只能 --smoke 验证管道）
+python training/train.py --epochs 100 --imgsz 640 --batch 16 --device 0
+
+# 3) 评估，并把关"类别顺序能否安全上线"（不一致会以退出码 3 失败）
+python training/evaluate.py --weights training/experiments/<run>/weights/best.pt --check-backend
+```
+
+> ⚠️ **类别顺序是本项目最容易踩的坑**：后端用 `CLASS_NAMES[class_id]` 翻译类别名，
+> 若训练时 `data.yaml` 的 `names` 顺序与 `backend/config.py` 不一致，模型照样能训、
+> mAP 也可能很好看，但上线后**每一类的名字都会张冠李戴且不报错**。
+> `train.py` 与 `evaluate.py --check-backend` 就是拦这个的。
+
+目录约定与 YOLO 标注格式说明另见 [`data/README.md`](data/README.md)。
 
 ---
 
 ## 9. 已知限制与风险
 
 1. **模型非自研**：见第 7 节；涉及 AGPL-3.0 义务与来源合规，对外表述必须如实。
-2. **无法本机复现训练**：无数据、无脚本、无训练结果（见第 8 节）。
+2. **本机无法正式训练**：训练链路已具备（`training/`），但本机**无 NVIDIA GPU**（`torch.cuda.is_available()` 为 False），只能跑 `--smoke` 验证管道；正式训练需在 GPU 上跑。此外数据集仍需自行准备（见第 8 节）。
 3. **无鉴权、无防护**：任何能访问端口的人都可以调用检测接口、下载截图、**清空历史数据**。
    仅供本机/内网演示，切勿暴露到公网。
 4. **仅开发服务器**：`app.run()` 启的是 Flask 开发服务器，`FLASK_DEBUG=False`；
@@ -415,12 +443,15 @@ python -m pytest tests -v
 测试使用 `tmp_path` 把数据库重定向到临时目录，**不会写入** `backend/data/detection.db`；
 API 测试用 test_client + 检测器桩，不加载 torch。
 
+当前共 **73 个用例**（本机实测全绿）。其中只有 `test_smoke_real_model.py` 会真正加载权重，其余用例把检测器桩掉 —— 所以那条冒烟用例是检测链路唯一的回归保护。
+
 | 文件 | 覆盖内容 |
 |------|----------|
 | `tests/test_database.py` | 数据库读写与隔离（临时库） |
 | `tests/test_geometry.py` | `containment_ratio` / `filter_detections` 包含语义（脸部内的小眼睛框应保留） |
 | `tests/test_logic.py` | 行为分析与告警生命周期逻辑 |
 | `tests/test_api.py` | `/api/health`、`/api/settings`、`/api/history`、`DELETE /api/history` 等接口 |
+| `tests/test_smoke_real_model.py` | **真实权重 + 真实图像**走完整推理链路（检测数 > 0、bbox 落在原图内、类别顺序与后端一致）；权重或样例图缺失时自动 skip |
 
 ---
 
@@ -430,6 +461,7 @@ API 测试用 test_client + 检测器桩，不加载 torch。
 |------|------|
 | [`models/README.md`](models/README.md) | 权重来源、SHA256、许可、替换模型的方法 |
 | [`data/README.md`](data/README.md) | 数据集目录约定、YOLO 标注格式、8 类映射 |
+| [`training/README.md`](training/README.md) | **训练全流程**：数据获取与标注口径、GPU 建议、类别顺序把关、替换权重 |
 | [`修复记录.md`](修复记录.md) | 本次修复的问题 → 修法 → 影响文件 |
 | `_审计报告/` | 审计与验证报告（本地过程材料，已被 `.gitignore` 排除） |
 | `软著材料_初版/` | 软著申报材料（含个人信息，已被 `.gitignore` 排除） |
@@ -446,3 +478,5 @@ API 测试用 test_client + 检测器桩，不加载 torch。
 | `ModuleNotFoundError: No module named 'flask'` | 依赖没装：`python -m pip install -r requirements.txt` |
 | 端口 5000 被占用 | 改 `backend/config.py` 的 `FLASK_PORT`，或结束占用进程 |
 | 历史/告警截图 404 | 截图文件已被清理或不在 `backend/uploads/alerts/`；历史表里的 `screenshot_url` 指向旧文件名 |
+| 想训练自己的模型 | 见 [`training/README.md`](training/README.md)。最短路径：`prepare_dataset.py --synthetic` 冒烟验证管道 → 换成真实数据 → `train.py --device 0` → `evaluate.py --check-backend` |
+| 训练报「train 划分里没有图片」 | `training/data.yaml` 指向 `data/yolo_format/`，而你还没放数据；先跑 `prepare_dataset.py` |

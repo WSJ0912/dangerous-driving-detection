@@ -50,6 +50,8 @@ models/weights/*.pt
 data/raw/
 data/yolo_format/
 training/experiments/
+training/data.yaml
+*.cache
 
 # ---- 运行时数据 ----
 uploads/
