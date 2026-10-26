@@ -50,17 +50,16 @@
 ## 权重来源与归属
 
 - **本权重由作者本人在本仓库的训练链路上训练产出**（配方与指标见上）。
-- 训练数据是一个 8 类驾驶行为检测数据集，由作者参与建设的团队项目「智迁驭行」所构建。
-  数据本身不在本仓库内（`data/**` 被 `.gitignore` 排除）。
+- 训练数据是一个 8 类驾驶行为检测数据集（6074 张 / 10,600 框）。
+  数据本身不在本仓库内（`data/**` 被 `.gitignore` 排除），需自备同结构数据集。
 - checkpoint 内嵌许可：**`license: AGPL-3.0 (https://ultralytics.com/license)`**。
 
 ### 历史权重（已备份，不参与对外表述）
 
-`weights/best.prev.bak.pt` 是替换前的旧权重，属于上述团队项目早前的训练产物，
-**不是本仓库训练链路的产物**，保留它只为出问题能回退：
+`weights/best.prev.bak.pt` 是替换前的旧权重，**不是本仓库训练链路的产物**，
+保留它只为出问题能回退：
 
-- 与该项目随包分发的 `yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt`
-  字节级完全相同（19,161,683 字节，SHA256 `E69680C7…73BA`）；
+- 19,161,683 字节，SHA256 `E69680C7…73BA`；
 - 同一验证集上总体 mAP50 为 **0.6665**，低于现役权重的 0.700。
 
 ## 许可与合规提示
@@ -124,8 +123,8 @@ Copy-Item training\experiments\<run>\weights\best.pt models\weights\best.pt
 
 ## 注意
 
-- 旧的 `MODEL_PATH_FALLBACK` 指向早前项目的 YOLO 部署目录（`yolo11-drive/.../train3/weights/best.pt`），
-  该目录已被 `.gitignore` 排除；在干净克隆的环境里它不存在，请以 `weights/best.pt` 为准。
+- `MODEL_PATH_FALLBACK` 指向 `models/weights/best.prev.bak.pt`（替换前的备份）。
+  两者都不入库，干净克隆里都不存在 —— 需自行放置权重后服务才能检测。
 - 不要提交**非本仓库训练**的 `.pt` 文件：体积大，且涉及来源与许可问题。
 - 本仓库训练链路产出的权重来源清晰，但要入库仍需显式强制添加，并注意单文件约 19 MB；
   **AGPL-3.0 义务同样适用于自训权重**（用 ultralytics 训练出的 checkpoint 会带 AGPL 标注）：

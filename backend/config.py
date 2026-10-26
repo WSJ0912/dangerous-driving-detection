@@ -24,14 +24,13 @@ ALERT_SCREENSHOT_DIR = os.path.join(BASE_DIR, 'uploads', 'alerts')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
 # ---- 模型配置 ----
-# 生产模型路径；若不存在则回退到训练输出目录
+# 生产模型路径。权重文件不入库（*.pt 被 .gitignore 排除），放置方式见 models/README.md
 MODEL_PATH = resource_path("../models/weights/best.pt")
-MODEL_PATH_FALLBACK = resource_path(
-    "../yolo11-drive/42_demo/runs/yolo11s_pretrained/train3/weights/best.pt")
-YOLO_PROJECT_PATH = os.path.abspath(os.path.join(BASE_DIR, '..', 'yolo11-drive'))
+# 回退路径：替换前的备份权重（同样不入库）
+MODEL_PATH_FALLBACK = resource_path("../models/weights/best.prev.bak.pt")
 
 # ---- 推理参数 ----
-# 输入尺寸需与模型训练尺寸一致（train3 使用 imgsz=640）。
+# 输入尺寸需与模型训练尺寸一致（当前权重训练时使用 imgsz=640）。
 # 注意：图像会做 letterbox 等比缩放后再送入模型，检测框会换算回原图像素坐标，
 # 因此该值只影响精度，不影响返回给前端的坐标系。
 DEFAULT_INPUT_SIZE = 640

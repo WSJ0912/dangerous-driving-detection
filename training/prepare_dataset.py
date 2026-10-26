@@ -12,12 +12,12 @@
 
 2) 转换并校验自己的 YOLO 格式数据集::
 
-       python training/prepare_dataset.py --source D:\\my_dataset --format yolo \\
+       python training/prepare_dataset.py --source <你的数据集目录> --format yolo \\
            --out data/yolo_format --val-ratio 0.2 --write-yaml
 
 3) 只校验、不复制（先看标注有没有问题）::
 
-       python training/prepare_dataset.py --source D:\\my_dataset --format yolo --dry-run
+       python training/prepare_dataset.py --source <你的数据集目录> --format yolo --dry-run
 
 退出码：0 正常；2 数据集/参数问题；3 标注校验发现错误。
 """

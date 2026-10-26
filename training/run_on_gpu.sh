@@ -53,8 +53,8 @@ if [[ -z "$DATA" ]]; then
   echo
   echo "数据集怎么传上来（任选一种）："
   echo "  A) 从你本机上传（在本机 Windows 的 PowerShell 里执行）："
-  echo "     scp -r -P <端口> \"D:\\edge下载\\【大作业-37】...\\dataset_driver_yolo\" root@<实例IP>:/root/data/"
-  echo "  B) 在实例上直接下载你当初下载过的那个【大作业-37】压缩包，再解压取 dataset_driver_yolo"
+  echo "     scp -r -P <端口> \"<你本机的数据集目录>\" root@<实例IP>:/root/data/"
+  echo "  B) 若该数据集有下载链接，直接在实例上下载并解压"
   echo "  C) 用 training/fetch_dataset.py 从 Roboflow 拉公开数据集（需 ROBOFLOW_API_KEY）"
   exit 1
 fi
@@ -173,7 +173,7 @@ echo "==========================================================================
 echo "完成。接下来："
 echo "================================================================================"
 echo "  1) 把权重取回本机（在本机 PowerShell 执行）："
-echo "     scp -P <端口> root@<实例IP>:<远端路径>/best.pt  \"D:\\基于深度学习的危险驾驶行为检测系统\\models\\weights\\best_new.pt\""
+echo "     scp -P <端口> root@<实例IP>:<远端路径>/best.pt  \"<你本机的项目目录>\\models\\weights\\best_new.pt\""
 echo "  2) 别忘了同时取回 metrics.json —— 那是你自己训练的真实指标，软著/答辩要用。"
 echo "  3) 本机替换前先备份："
 echo "     Copy-Item models\\weights\\best.pt models\\weights\\best.prev.bak.pt"

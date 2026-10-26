@@ -82,11 +82,9 @@
 ├── scripts/                     # start.bat / start.ps1 / start.sh 启动脚本
 ├── tests/                       # pytest 测试（数据库隔离、几何、行为逻辑、API）
 ├── 深度学习/                     # 早期临时脚本残留（111.py），非正式代码
-├── yolo11-drive/                # 早前项目的 YOLO 部署目录（约 123 MB，已忽略，非本仓库源码）
 ├── release/                     # 2026-05-05 旧架构快照（约 1.2 GB，已忽略，不可直接交付）
 ├── 软著材料_初版/                # 软著申报材料（约 53 MB，含个人/单位信息，已忽略）
 ├── README.md                    # 本文件
-├── 修复记录.md                   # 本次修复的问题 → 修法 → 影响文件
 ├── requirements.txt             # 运行依赖（实测版本）
 └── requirements-dev.txt         # 开发/测试依赖
 ```
@@ -375,7 +373,7 @@ DELETE /api/history?scope=all|detections|alerts
 | 类别 | 8 类，顺序与 `backend/config.py` 的 `CLASS_NAMES` 完全一致（已由 `--check-backend` 校验） |
 | 文件 | 19,170,394 字节，SHA256 `7AD2B81B…5500` |
 | 起始权重 | `yolo11s.pt`（ultralytics 官方 **COCO 预训练**） |
-| 训练数据 | 8 类驾驶行为检测数据集，6074 张 / 10,600 框（作者参与建设的团队项目「智迁驭行」所构建；数据不入库） |
+| 训练数据 | 8 类驾驶行为检测数据集，6074 张 / 10,600 框（**数据不入库**，需自备同结构数据集） |
 | 训练配置 | **100 epoch / imgsz 640 / batch 16**，单卡 GPU，fp16 AMP |
 | 实测指标 | 验证集 1502 张 / 2229 实例：**mAP50 0.700、mAP50-95 0.409**；闭眼类 `close_eye` **0.7734** |
 
@@ -491,7 +489,6 @@ API 测试用 test_client + 检测器桩，不加载 torch。
 | [`models/README.md`](models/README.md) | 权重来源、SHA256、许可、替换模型的方法 |
 | [`data/README.md`](data/README.md) | 数据集目录约定、YOLO 标注格式、8 类映射 |
 | [`training/README.md`](training/README.md) | **训练全流程**：数据获取与标注口径、GPU 建议、类别顺序把关、替换权重 |
-| [`修复记录.md`](修复记录.md) | 本次修复的问题 → 修法 → 影响文件 |
 | `_审计报告/` | 审计与验证报告（本地过程材料，已被 `.gitignore` 排除） |
 | `软著材料_初版/` | 软著申报材料（含个人信息，已被 `.gitignore` 排除） |
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """YOLO 模型加载与推理"""
 import os
-import sys
 
 import torch
 
@@ -21,7 +20,7 @@ def _resolve_model_path():
     raise FileNotFoundError(
         f"模型文件不存在: {config.MODEL_PATH}\n"
         f"回退路径也不存在: {config.MODEL_PATH_FALLBACK}\n"
-        f"请将 best.pt 放到 models/weights/ 目录下（详见 README 的“模型来源”章节）"
+        f"请将 best.pt 放到 models/weights/ 目录下（详见 models/README.md）"
     )
 
 
@@ -33,7 +32,6 @@ def get_model():
 
     model_path = _resolve_model_path()
 
-    sys.path.append(config.YOLO_PROJECT_PATH)
     from ultralytics import YOLO
 
     torch.serialization.add_safe_globals([torch.nn.Module])

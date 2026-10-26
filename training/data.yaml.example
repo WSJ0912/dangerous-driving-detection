@@ -9,10 +9,10 @@
 #     索引错位会导致上线后检测类别张冠李戴，而且不会报任何错。
 #     用 `python training/evaluate.py --check-backend` 可以校验。
 #
-# path 必须写成绝对路径：本机 ultralytics 的 datasets_dir 里可能残留
-# 别人的路径，依赖默认值会把数据解析到别处。
+# path 必须写成绝对路径：ultralytics 的 datasets_dir 里可能残留历史路径，
+# 依赖默认值会把数据解析到别处。
 
-path: D:/基于深度学习的危险驾驶行为检测系统/data/yolo_format
+path: /absolute/path/to/your/dataset
 train: train/images
 val: val/images
 

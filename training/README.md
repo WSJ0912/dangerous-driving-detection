@@ -42,7 +42,7 @@ python training/evaluate.py --weights training/experiments/run/weights/best.pt -
 
 ```powershell
 # 1) 准备并校验自己的数据集（见 §2、§3）
-python training/prepare_dataset.py --source D:\my_dataset --format yolo --val-ratio 0.2 --write-yaml
+python training/prepare_dataset.py --source <你的数据集目录> --format yolo --val-ratio 0.2 --write-yaml
 
 # 2) 训练
 python training/train.py --epochs 100 --imgsz 640 --batch 16 --device 0 --name my_yolo11s
@@ -90,7 +90,7 @@ my_dataset/
 ### ④ 校验
 
 ```powershell
-python training/prepare_dataset.py --source D:\my_dataset --format yolo --write-yaml
+python training/prepare_dataset.py --source <你的数据集目录> --format yolo --write-yaml
 ```
 
 校验器会逐条检查并统计：

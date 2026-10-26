@@ -132,7 +132,7 @@ def client(detect_calls):
 def test_health_reports_real_model_state(client, monkeypatch):
     monkeypatch.setattr(detector, 'get_model_info', lambda: {
         'loaded': True,
-        'model_path': 'D:\\models\\weights\\best.pt',
+        'model_path': '/app/models/weights/best.pt',
         'device': 'cpu',
         'num_classes': 8,
         'classes': list(config.CLASS_NAMES),

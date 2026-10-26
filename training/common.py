@@ -31,7 +31,7 @@ DEFAULT_EXPERIMENTS_DIR = os.path.join(TRAINING_DIR, 'experiments')
 DEFAULT_START_WEIGHTS = os.path.join(PROJECT_ROOT, 'models', 'weights', 'best.pt')
 DEFAULT_DATASET_DIR = os.path.join(PROJECT_ROOT, 'data', 'yolo_format')
 
-# 说明：生产权重来自本团队早前的「智迁驭行」项目（详见 models/README.md）。
+# 说明：生产权重由本仓库训练链路产出（详见 models/README.md）。
 # 想产出"自己的"权重，就以它为起点做微调，或改用自采数据集从 yolo11s 预训练权重起步。
 
 

@@ -13,9 +13,9 @@
 
 跳过条件
 --------
-模型权重（``*.pt`` 已 gitignore）或真实样例图像（``yolo11-drive/`` 为第三方
-demo 包，未入库）任一缺失时自动 skip，不会让测试套件失败 —— 因此从 git
-clone 后即使没有放置 ``best.pt``，``pytest`` 依旧全绿（只是少跑这一条）。
+模型权重（``*.pt`` 已 gitignore）或真实样例图像任一缺失时自动 skip，
+不会让测试套件失败 —— 因此从 git clone 后即使没有放置 ``best.pt``，
+``pytest`` 依旧全绿（只是少跑这一条）。
 """
 import base64
 import os
@@ -40,12 +40,13 @@ except Exception as _exc:  # pragma: no cover - 环境缺失时整文件跳过
 
 from backend import config
 
-SAMPLE_CANDIDATES = (
-    os.path.join(PROJECT_ROOT, 'yolo11-drive', '42_demo', 'runs',
-                 'yolo11s_pretrained', 'train3', 'val_batch0_labels.jpg'),
-    os.path.join(PROJECT_ROOT, 'yolo11-drive', '42_demo', 'runs',
-                 'yolo11s_pretrained', 'train3', 'train_batch0.jpg'),
-)
+# 真实样例图像不入库（体积原因）。需要跑这条回归时，把任意一张含目标的
+# 真实图像放到 <项目根>/samples/ 下，或用环境变量 DETECT_SAMPLE_IMAGE 指定。
+SAMPLE_CANDIDATES = tuple(p for p in (
+    os.environ.get('DETECT_SAMPLE_IMAGE'),
+    os.path.join(PROJECT_ROOT, 'samples', 'sample.jpg'),
+    os.path.join(PROJECT_ROOT, 'samples', 'val_batch0_labels.jpg'),
+) if p)
 
 
 def _imread_unicode(path):
@@ -72,7 +73,7 @@ _SAMPLE_PATH, _SAMPLE_IMG = _find_sample()
 )
 @pytest.mark.skipif(
     _SAMPLE_IMG is None,
-    reason="未找到真实样例图像（yolo11-drive/ 为第三方 demo 包，未入库）",
+    reason="未找到真实样例图像（放入 <项目根>/samples/sample.jpg 即可启用本测试）",
 )
 def test_detect_real_image_end_to_end():
     """真实权重 + 真实图像走完整 HTTP 链路，必须产出非 0 检测且坐标在原图内"""
