@@ -265,6 +265,7 @@ python backend/app.py
 | `evaluate.py` | 逐类指标 + **类别顺序把关**；`--json` 留档 |
 | `export.py` | 导出 ONNX / TorchScript（生产后端目前只加载 `.pt`，此项为将来部署预留） |
 | `fetch_dataset.py` | 从 Roboflow Universe 拉取公开**检测**数据集，按映射重标为本项目 8 类并合并 |
+| `run_on_gpu.sh` | 租用 GPU（Linux）一键跑通：环境自检 → 依赖安装 → 数据校验 → 训练 → 逐类评估；**类别顺序不对就以退出码 2 拒绝训练** |
 | `data.yaml.example` | 数据 yaml 模板 |
 
 ## 8. 常见问题
