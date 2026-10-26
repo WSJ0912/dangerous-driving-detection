@@ -71,6 +71,11 @@ def main(argv=None):
             setattr(args, k, v)
         args.device = 'cpu'
 
+    # --project 必须是绝对路径：传相对路径时 ultralytics 会把它拼到自己的
+    # runs_dir 之下（<项目>/runs/detect/<project>/<name>），产物位置不可预期。
+    args.project = os.path.abspath(args.project)
+    args.data = os.path.abspath(args.data)
+
     banner('训练前检查')
 
     if not os.path.exists(args.data):

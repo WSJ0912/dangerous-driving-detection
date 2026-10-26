@@ -54,7 +54,7 @@ def validate_label_file(path, clip=False):
     Returns:
         (instances: list[(cls, cx, cy, w, h)], errors: list[str], clipped: int)
     """
-    instances, errors = [], [], 0
+    instances, errors, clipped = [], [], 0
     try:
         with open(path, 'r', encoding='utf-8') as f:
             lines = f.read().splitlines()

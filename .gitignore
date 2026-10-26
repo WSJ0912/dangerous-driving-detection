@@ -50,6 +50,7 @@ models/weights/*.pt
 *.onnx
 
 # ---- 数据集与训练产物（仓库内只有 .gitkeep，无真实数据）----
+runs/
 data/raw/
 data/yolo_format/
 training/experiments/
