@@ -26,6 +26,7 @@ from common import (  # noqa: E402
     CLASS_NAMES,
     DEFAULT_DATA_YAML,
     DEFAULT_EXPERIMENTS_DIR,
+    DEFAULT_START_WEIGHTS,
     NUM_CLASSES,
     PROJECT_ROOT,
     banner,
@@ -38,6 +39,8 @@ from common import (  # noqa: E402
 )
 
 SMOKE_PRESET = dict(epochs=1, imgsz=320, batch=4, workers=0, plots=False)
+# 仓库不含 *.pt（.gitignore 排除），冒烟时若默认权重缺失就退回到可自动下载的模型
+SMOKE_FALLBACK_WEIGHTS = 'yolo11n.pt'
 
 
 def parse_args(argv=None):
@@ -118,6 +121,16 @@ def main(argv=None):
         banner('冒烟模式（--smoke）', char='!')
         print('本次运行仅用于验证【训练链路能跑通】：epochs=1、imgsz=320、batch=4、device=cpu。')
         print('产出的权重不可用于生产，指标数值没有任何意义。正式训练请在 GPU 上跑完整参数。')
+
+    # 全新克隆里没有 models/weights/best.pt（权重不入库）。冒烟模式的目的是验证链路，
+    # 不该因此失败 —— 退回到可自动下载的模型；正式训练仍保持明确报错，不静默换权重。
+    if (args.smoke and not args.resume
+            and str(args.model).strip().lower() in ('default', 'best')
+            and not os.path.exists(DEFAULT_START_WEIGHTS)):
+        print('\n[提示] 仓库内没有 models/weights/best.pt（权重不入库），')
+        print('       冒烟模式改用可自动下载的 %s（首次运行需联网）。'
+              % SMOKE_FALLBACK_WEIGHTS)
+        args.model = SMOKE_FALLBACK_WEIGHTS
 
     weights = args.resume or resolve_weights(args.model)
     device = resolve_device(args.device)
